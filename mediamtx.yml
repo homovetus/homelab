@@ -1,0 +1,47 @@
+paths:
+  stream0:
+  stream1:
+  stream2:
+  stream3:
+  stream4:
+  stream5:
+  stream6:
+  stream7:
+  stream8:
+  stream9:
+
+authMethod: internal
+
+# Internal authentication.
+# list of users.
+authInternalUsers:
+  # Default unprivileged user.
+  # Username. 'any' means any user, including anonymous ones.
+  - user: user
+    # Password. Not used in case of 'any' user.
+    pass: pass
+    # IPs or networks allowed to use this user. An empty list means any IP.
+    ips: []
+    # List of permissions.
+    permissions:
+      # Available actions are: publish, read, playback, api, metrics, pprof.
+      - action: publish
+        # Paths can be set to further restrict access to a specific path.
+        # An empty path means any path.
+        # Regular expressions can be used by using a tilde as prefix.
+        path:
+      - action: read
+        path:
+      - action: playback
+        path:
+
+    # Default administrator.
+    # This allows to use API, metrics and PPROF without authentication,
+    # if the IP is localhost.
+  - user: any
+    pass:
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: api
+      - action: metrics
+      - action: pprof

@@ -1,0 +1,45 @@
+cameras:
+  amcrest:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://onvif:password!@192.168.1.4:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif
+          roles:
+            - record
+    onvif:
+      host: 192.168.1.4
+      user: onvif
+      password: password!
+
+  test:
+    enabled: false
+    ffmpeg:
+      inputs:
+        - path: rtsp://user:pass@host.docker.internal:8554/stream
+          roles:
+            - record
+
+detect:
+  enabled: false
+
+mqtt:
+  enabled: false
+
+record:
+  enabled: true
+  retain:
+    days: 2
+    mode: all
+  events:
+    retain:
+      default: 10
+      mode: motion
+
+auth:
+  enabled: false
+  # reset_admin_password: true
+
+tls:
+  enabled: True # Optional: Enable TLS for port 8971
+
+version: 0.14
