@@ -3,17 +3,18 @@ import gi
 import sys
 
 gi.require_version("GLib", "2.0")
-gi.require_version("GObject", "2.0")
 gi.require_version("Gst", "1.0")
 gi.require_version("GstRtp", "1.0")
 
 from gi.repository import Gst, GstRtp, GLib
 
+# initialize GStreamer
+Gst.init(sys.argv[1:])
+
 ntp_time = 0
 rtp_time = 0
 
 timestamps = []
-time_file = open("timestamps.txt", "w")
 
 
 class TimeValue:
@@ -34,21 +35,6 @@ class TimeValue:
 # Create a single instance of TimeValue
 time_converter = TimeValue()
 
-# initialize GStreamer
-Gst.init(sys.argv[1:])
-
-# Create the GStreamer pipeline
-pipeline = Gst.parse_launch(
-    # " rtspsrc name=camerartsp location=rtsp://user:pass@127.0.0.1:8554/stream0 protocols=tcp ! "
-    " rtspsrc name=camerartsp protocols=tcp location=rtsp://onvif:password!@192.168.0.13:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif ! "
-    " rtph264depay name=rtpdepay ! "
-    " h264parse ! "
-    " matroskamux ! "
-    " filesink location=./timestamp.mkv"
-)
-
-bus = pipeline.get_bus()
-
 
 def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
     t = message.type
@@ -60,10 +46,6 @@ def on_message(bus: Gst.Bus, message: Gst.Message, loop: GLib.MainLoop):
         print(f"Error: {err}, {debug}")
         loop.quit()
     return True
-
-
-loop = GLib.MainLoop.new(None, False)
-bus.add_watch(GLib.PRIORITY_DEFAULT, on_message, loop)
 
 
 def on_receiving_rtcp_callback(session, buffer: Gst.Buffer):
@@ -82,7 +64,6 @@ def on_receiving_rtcp_callback(session, buffer: Gst.Buffer):
             sender_info = rtcp_packet.sr_get_sender_info()
             ntp_time = sender_info[1]  # NTP timestamp
             rtp_time = sender_info[2]  # RTP timestamp
-            print(ntp_time)
         # Move to the next packet
         next_packet = rtcp_packet.move_to_next()
 
@@ -133,6 +114,20 @@ def calculate_timestamp(pad, info):
     return Gst.PadProbeReturn.OK
 
 
+# Create the GStreamer pipeline
+pipeline = Gst.parse_launch(
+    # " rtspsrc name=camerartsp location=rtsp://user:pass@127.0.0.1:8554/stream0 protocols=tcp ! "
+    " rtspsrc name=camerartsp protocols=tcp location=rtsp://onvif:password!@192.168.0.13:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif ! "
+    " rtph264depay name=rtpdepay ! "
+    " h264parse ! "
+    " mp4mux ! "
+    " filesink location=./timestamp.mp4"
+)
+
+loop = GLib.MainLoop.new(None, False)
+bus = pipeline.get_bus()
+bus.add_watch(GLib.PRIORITY_DEFAULT, on_message, loop)
+
 rtspsrc = pipeline.get_by_name("camerartsp")
 rtspsrc.connect("new-manager", on_new_manager_callback)
 
@@ -148,20 +143,18 @@ try:
 except KeyboardInterrupt:
     print("Stopping the pipeline...")
     pipeline.send_event(Gst.Event.new_eos())
+    # Wait for gstreamer to fully stop, otherwise file will be corrupted
     print("Waiting for the EOS message on the bus")
+    # This method will block until the EOS message is received
     bus.timed_pop_filtered(Gst.CLOCK_TIME_NONE, Gst.MessageType.EOS)
 finally:
-    # Release the RTCP pad if it was created
-    #     if rtcp_pad:
-    #         manager = rtspsrc.get_internal_element()
-    #         if manager:
-    #             manager.release_request_pad(rtcp_pad)
     # Stop the pipeline when done
     print("Stopping pipeline")
     pipeline.set_state(Gst.State.NULL)
     # save the timestamps to a file
     print(f"Gathered {len(timestamps)} timestamps")
     print("last timestamp", timestamps[-1])
+    time_file = open("timestamps.txt", "w")
     for ts in timestamps:
         time_file.write(f"{ts}\n")
     time_file.flush()  # Ensure that data is written
