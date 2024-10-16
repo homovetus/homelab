@@ -2,4 +2,8 @@ frigate/config/*
 frigate/storage/*
 !frigate/config/config.yaml
 
+build
+
 **/.DS_Store
+.vscode
+.xmake
