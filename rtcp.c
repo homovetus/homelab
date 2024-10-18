@@ -34,10 +34,8 @@ static void new_manager_callback(GstElement *rtspsrc, GstElement *manager,
                                  gpointer udata);
 
 /* Callback for receiving RTCP packets */
-static void on_receiving_rtcp_callback(GstPad *pad, GstPadProbeInfo *info,
-                                       gpointer user_data) {
-  GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
-  GstRTPBuffer rtp_buffer = {0};
+static void on_receiving_rtcp_callback(GstElement *session, GstBuffer *buffer,
+                                       gpointer udata) {
   GstRTCPBuffer rtcp_buffer = {0};
   GstRTCPPacket rtcp_packet;
 
@@ -46,10 +44,12 @@ static void on_receiving_rtcp_callback(GstPad *pad, GstPadProbeInfo *info,
 
   if (gst_rtcp_buffer_get_first_packet(&rtcp_buffer, &rtcp_packet)) {
     if (gst_rtcp_packet_get_type(&rtcp_packet) == GST_RTCP_TYPE_SR) {
-      GstRTCPSenderInfo sender_info;
-      gst_rtcp_packet_sr_get_sender_info(&rtcp_packet, &sender_info);
-      rtcp_ntp = sender_info.ntptime;
-      rtcp_rtp = sender_info.rtptime;
+      guint32 ssrc;
+      guint32 packet_count;
+      guint32 octet_count;
+      gst_rtcp_packet_sr_get_sender_info(&rtcp_packet, &ssrc, &rtcp_ntp,
+                                         &rtcp_rtp, &packet_count,
+                                         &octet_count);
     }
   }
 
@@ -87,16 +87,36 @@ static GstPadProbeReturn calculate_frame_timestamp(GstPad *pad,
   return GST_PAD_PROBE_OK;
 }
 
+static void new_manager_callback(GstElement *rtspsrc, GstElement *manager,
+                                 gpointer udata) {
+  g_print("New manager created\n");
+  GstPad *rtcp_pad =
+      gst_element_request_pad_simple(manager, "recv_rtcp_sink_0");
+  if (!rtcp_pad) {
+    g_printerr("Failed to request recv_rtcp_sink_0 pad\n");
+    return;
+  }
+  GObject *session;
+  g_signal_emit_by_name(manager, "get-internal-session", 0, &session);
+  if (!rtcp_pad) {
+    g_printerr("Failed to get internal session\n");
+    return;
+  }
+  g_signal_connect_after(session, "on-receiving-rtcp",
+                         G_CALLBACK(on_receiving_rtcp_callback), NULL);
+}
+
 /* Inject SEI metadata */
 static GstPadProbeReturn inject_sei(GstPad *pad, GstPadProbeInfo *info,
                                     gpointer user_data) {
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
 
-  GstVideoMeta *meta =
-      gst_buffer_add_video_sei_user_data_unregistered_meta(buffer, 114, 51, 10);
-  if (meta) {
-    g_print("SEI metadata injected\n");
-  }
+  // GstVideoMeta *meta =
+  //     gst_buffer_add_video_sei_user_data_unregistered_meta(buffer, 114, 51,
+  //     10);
+  // if (meta) {
+  //   g_print("SEI metadata injected\n");
+  // }
 
   return GST_PAD_PROBE_OK;
 }
@@ -105,31 +125,31 @@ int main_func(int argc, char *argv[]) {
   // Initialize the GStreamer library
   gst_init(&argc, &argv);
 
-  GstElement *pipeline =
-      gst_parse_launch("rtspsrc name=rtspsrc protocols=tcp "
-                       "location=rtsp://user:pass@127.0.0.1:8554/stream0 ! "
-                       "rtpjitterbuffer name=rtpjitterbuffer ! "
-                       "rtph264depay name=rtph264depay ! "
-                       "h264parse name=h264parse ! "
-                       "splitmuxsink name=splitmuxsink location=video%02d.mp4 "
-                       "max-size-time=10000000000 max-size-bytes=1000000",
-                       NULL);
+  GstElement *pipeline = gst_parse_launch(
+      "rtspsrc name=rtspsrc protocols=tcp "
+      "location=rtsp://user:pass@127.0.0.1:8554/stream0 ! "
+      "rtpjitterbuffer name=rtpjitterbuffer ! "
+      "rtph264depay name=rtph264depay ! "
+      "h264parse name=h264parse ! "
+      "splitmuxsink name=splitmuxsink location=recording%02d.mp4 "
+      "max-size-time=10000000000 max-size-bytes=1000000",
+      NULL);
   if (!pipeline) {
     g_printerr("Pipeline can nat be created");
     return -1;
   }
 
-  // loop = g_main_loop_new(NULL, FALSE);
+  loop = g_main_loop_new(NULL, FALSE);
 
   GstElement *rtspsrc = gst_bin_get_by_name(GST_BIN(pipeline), "rtspsrc");
   GstElement *rtph264depay =
       gst_bin_get_by_name(GST_BIN(pipeline), "rtph264depay");
   GstPad *depaysink_pad = gst_element_get_static_pad(rtph264depay, "sink");
   GstElement *h264parse = gst_bin_get_by_name(GST_BIN(pipeline), "h264parse");
-  GstElement *parsesrc_pad = gst_element_get_static_pad(h264parse, "src");
+  GstPad *parsesrc_pad = gst_element_get_static_pad(h264parse, "src");
 
-  g_signal_connect(rtspsrc, "new-manager",
-                   G_CALLBACK(on_receiving_rtcp_callback), NULL);
+  g_signal_connect(rtspsrc, "new-manager", G_CALLBACK(new_manager_callback),
+                   NULL);
   gst_pad_add_probe(depaysink_pad, GST_PAD_PROBE_TYPE_BUFFER,
                     calculate_frame_timestamp, NULL, NULL);
   // gst_pad_add_probe(parsesrc_pad, GST_PAD_PROBE_TYPE_BUFFER, inject_sei,
@@ -143,7 +163,7 @@ int main_func(int argc, char *argv[]) {
     gst_object_unref(pipeline);
     return -1;
   }
-  // g_main_loop_run(loop);
+  g_main_loop_run(loop);
 
   GstBus *bus = gst_element_get_bus(pipeline);
   GstMessage *msg = gst_bus_timed_pop_filtered(
@@ -177,25 +197,8 @@ int main_func(int argc, char *argv[]) {
   gst_object_unref(bus);
   gst_element_set_state(pipeline, GST_STATE_NULL);
   gst_object_unref(pipeline);
-  // g_main_loop_unref(loop);
+  g_main_loop_unref(loop);
   return 0;
-}
-
-static void new_manager_callback(GstElement *rtspsrc, GstElement *manager,
-                                 gpointer udata) {
-  g_print("New manager created\n");
-  GstPad *rtcp_pad =
-      gst_element_request_pad_simple(manager, "recv_rtcp_sink_0");
-  if (!rtcp_pad) {
-    g_printerr("Failed to request recv_rtcp_sink_0 pad\n");
-    return;
-  }
-  RTPSession *session = g_signal_emit_by_name(manager, "get-internal-session");
-  if (!rtcp_pad) {
-    g_printerr("Failed to get internal session\n");
-    return;
-  }
-  g_signal_connect_after(instance, detailed_signal, c_handler, data)
 }
 
 int main(int argc, char *argv[]) {
