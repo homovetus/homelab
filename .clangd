@@ -1,0 +1,6 @@
+CompileFlags:
+  Add: [-Wall]
+  CompilationDatabase: .vscode
+
+Index:
+  StandardLibrary: Yes
