@@ -143,18 +143,27 @@ static GstPadProbeReturn inject_sei_cb(GstPad *pad, GstPadProbeInfo *info,
 }
 
 int main_func(int argc, char *argv[]) {
+  if (argc < 3) {
+    g_printerr("Usage: %s <RTSP URL> <Output File Prefix>\n", argv[0]);
+    return -1;
+  }
+
   // Initialize the GStreamer library
   gst_init(&argc, &argv);
 
-  GstElement *pipeline = gst_parse_launch(
-      "rtspsrc name=rtspsrc protocols=tcp "
-      "location=rtsp://user:pass@127.0.0.1:8554/stream0 ! "
-      "rtpjitterbuffer name=rtpjitterbuffer ! "
-      "rtph264depay name=rtph264depay ! "
-      "h264parse name=h264parse ! "
-      "splitmuxsink name=splitmuxsink location=recording%02d.mp4 "
-      "max-size-time=10000000000 max-size-bytes=1000000",
-      NULL);
+  gchar *pipeline_desc =
+      g_strdup_printf("rtspsrc name=rtspsrc protocols=tcp location=%s ! "
+                      "rtpjitterbuffer name=rtpjitterbuffer ! "
+                      "rtph264depay name=rtph264depay ! "
+                      "h264parse name=h264parse ! "
+                      "splitmuxsink name=splitmuxsink location=%s%%02d.mp4 "
+                      "max-size-time=10000000000 max-size-bytes=10000000",
+                      argv[1], argv[2]);
+
+  printf("pipeline_desc: %s\n", pipeline_desc);
+
+  // Parse and launch the pipeline
+  GstElement *pipeline = gst_parse_launch(pipeline_desc, NULL);
   if (!pipeline) {
     g_printerr("Pipeline can nat be created");
     return -1;
