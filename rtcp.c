@@ -1,14 +1,15 @@
+#include <stdio.h>
+
 #include <glib.h>
 #include <gst/codecparsers/gsth264parser.h>
 #include <gst/gst.h>
 #include <gst/rtp/rtp.h>
 #include <gst/video/video.h>
-#include <stdio.h>
-#include <sys/time.h>
 
 static guint64 rtcp_ntp = 0;
 static guint32 rtcp_rtp = 0;
-static GMainLoop *loop;
+static gdouble last_timestamp = 0;
+static GstH264NalParser *h264_nal_parser = NULL;
 
 /* UnixTime equivalent structure for C */
 typedef struct {
@@ -28,16 +29,11 @@ void convert_ntp_to_datetime(guint64 ntp_timestamp) {
   }
 }
 
-// Emitted after a new manager (like rtpbin) was created and the default
-// properties were configured.
-static void new_manager_callback(GstElement *rtspsrc, GstElement *manager,
-                                 gpointer udata);
-
 /* Callback for receiving RTCP packets */
 static void on_receiving_rtcp_callback(GstElement *session, GstBuffer *buffer,
                                        gpointer udata) {
   GstRTCPBuffer rtcp_buffer = {0};
-  GstRTCPPacket rtcp_packet;
+  GstRTCPPacket rtcp_packet = {0};
 
   if (!gst_rtcp_buffer_map(buffer, GST_MAP_READ, &rtcp_buffer))
     return;
@@ -57,9 +53,8 @@ static void on_receiving_rtcp_callback(GstElement *session, GstBuffer *buffer,
 }
 
 /* Calculate frame timestamp */
-static GstPadProbeReturn calculate_frame_timestamp(GstPad *pad,
-                                                   GstPadProbeInfo *info,
-                                                   gpointer user_data) {
+static GstPadProbeReturn frame_callback(GstPad *pad, GstPadProbeInfo *info,
+                                        gpointer user_data) {
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
   GstRTPBuffer rtp_buffer = {0};
 
@@ -76,6 +71,7 @@ static GstPadProbeReturn calculate_frame_timestamp(GstPad *pad,
     convert_ntp_to_datetime(rtcp_ntp);
 
     gdouble timestamp = unix_time.sec + (unix_time.usec / 1000000.0) + rtp_diff;
+    last_timestamp = timestamp;
 
     g_print("Timestamp: %lf, NTP: %llu, RTP: %u, RTP header timestamp: %u, "
             "Marker: %d\n",
@@ -87,6 +83,8 @@ static GstPadProbeReturn calculate_frame_timestamp(GstPad *pad,
   return GST_PAD_PROBE_OK;
 }
 
+// Emitted after a new manager (like rtpbin) was created and the default
+// properties were configured.
 static void new_manager_callback(GstElement *rtspsrc, GstElement *manager,
                                  gpointer udata) {
   g_print("New manager created\n");
@@ -98,7 +96,7 @@ static void new_manager_callback(GstElement *rtspsrc, GstElement *manager,
   }
   GObject *session;
   g_signal_emit_by_name(manager, "get-internal-session", 0, &session);
-  if (!rtcp_pad) {
+  if (!session) {
     g_printerr("Failed to get internal session\n");
     return;
   }
@@ -106,17 +104,40 @@ static void new_manager_callback(GstElement *rtspsrc, GstElement *manager,
                          G_CALLBACK(on_receiving_rtcp_callback), NULL);
 }
 
-/* Inject SEI metadata */
-static GstPadProbeReturn inject_sei(GstPad *pad, GstPadProbeInfo *info,
-                                    gpointer user_data) {
+static GstPadProbeReturn inject_sei_cb(GstPad *pad, GstPadProbeInfo *info,
+                                       gpointer user_data) {
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
+  GstBuffer *new_buffer;
+  GstH264SEIMessage sei_msg;
+  GstH264UserDataUnregistered *udu;
+  GstMemory *sei_memory;
+  GArray *sei_data;
 
-  // GstVideoMeta *meta =
-  //     gst_buffer_add_video_sei_user_data_unregistered_meta(buffer, 114, 51,
-  //     10);
-  // if (meta) {
-  //   g_print("SEI metadata injected\n");
-  // }
+  memset(&sei_msg, 0, sizeof(GstH264SEIMessage));
+  sei_msg.payloadType = GST_H264_SEI_USER_DATA_UNREGISTERED;
+  udu = &sei_msg.payload.user_data_unregistered;
+
+  // 96dac8c1-d1cb-42e4-8981-34f229180850
+  guint8 const uuid[16] = {0x96, 0xda, 0xc8, 0xc1, 0xd1, 0xcb, 0x42, 0xe4,
+                           0x89, 0x81, 0x34, 0xf2, 0x29, 0x18, 0x08, 0x50};
+  memcpy(udu->uuid, uuid, sizeof(uuid));
+
+  // data is the last_timestamp
+  udu->data = (guint8 *)&last_timestamp;
+  udu->size = sizeof(last_timestamp);
+
+  sei_data = g_array_new(FALSE, FALSE, sizeof(sei_msg));
+  g_array_append_vals(sei_data, &sei_msg, 1);
+  sei_memory = gst_h264_create_sei_memory_avc(4, sei_data);
+  g_array_unref(sei_data);
+
+  new_buffer =
+      gst_h264_parser_insert_sei_avc(h264_nal_parser, 4, buffer, sei_memory);
+  if (new_buffer != NULL) {
+    info->data = new_buffer;
+    info->size = gst_buffer_get_size(new_buffer);
+    gst_buffer_unref(buffer);
+  }
 
   return GST_PAD_PROBE_OK;
 }
@@ -139,7 +160,7 @@ int main_func(int argc, char *argv[]) {
     return -1;
   }
 
-  loop = g_main_loop_new(NULL, FALSE);
+  GMainLoop *loop = g_main_loop_new(NULL, FALSE);
 
   GstElement *rtspsrc = gst_bin_get_by_name(GST_BIN(pipeline), "rtspsrc");
   GstElement *rtph264depay =
@@ -148,13 +169,14 @@ int main_func(int argc, char *argv[]) {
   GstElement *h264parse = gst_bin_get_by_name(GST_BIN(pipeline), "h264parse");
   GstPad *parsesrc_pad = gst_element_get_static_pad(h264parse, "src");
 
+  h264_nal_parser = gst_h264_nal_parser_new();
+
   g_signal_connect(rtspsrc, "new-manager", G_CALLBACK(new_manager_callback),
                    NULL);
-  gst_pad_add_probe(depaysink_pad, GST_PAD_PROBE_TYPE_BUFFER,
-                    calculate_frame_timestamp, NULL, NULL);
-  // gst_pad_add_probe(parsesrc_pad, GST_PAD_PROBE_TYPE_BUFFER, inject_sei,
-  // NULL,
-  //                   NULL);
+  gst_pad_add_probe(depaysink_pad, GST_PAD_PROBE_TYPE_BUFFER, frame_callback,
+                    NULL, NULL);
+  gst_pad_add_probe(parsesrc_pad, GST_PAD_PROBE_TYPE_BUFFER, inject_sei_cb,
+                    NULL, NULL);
 
   /* Start the pipeline */
   GstStateChangeReturn ret = gst_element_set_state(pipeline, GST_STATE_PLAYING);
@@ -194,6 +216,7 @@ int main_func(int argc, char *argv[]) {
   }
 
   /* Cleanup */
+  gst_h264_nal_parser_free(h264_nal_parser);
   gst_object_unref(bus);
   gst_element_set_state(pipeline, GST_STATE_NULL);
   gst_object_unref(pipeline);
