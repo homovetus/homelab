@@ -1,9 +1,9 @@
-frigate/config/*
-frigate/storage/*
 !frigate/config/config.yaml
-
-build
-
 **/.DS_Store
+
+.cache
 .vscode
 .xmake
+build
+frigate/config/*
+frigate/storage/*
