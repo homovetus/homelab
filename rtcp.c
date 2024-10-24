@@ -151,14 +151,15 @@ int main_func(int argc, char *argv[]) {
   // Initialize the GStreamer library
   gst_init(&argc, &argv);
 
-  gchar *pipeline_desc =
-      g_strdup_printf("rtspsrc name=rtspsrc protocols=tcp location=%s ! "
-                      "rtpjitterbuffer name=rtpjitterbuffer ! "
-                      "rtph264depay name=rtph264depay ! "
-                      "h264parse name=h264parse ! "
-                      "splitmuxsink name=splitmuxsink location=%s%%02d.mp4 "
-                      "max-size-time=10000000000 max-size-bytes=10000000",
-                      argv[1], argv[2]);
+  gchar *pipeline_desc = g_strdup_printf(
+      "rtspsrc name=rtspsrc protocols=tcp location=%s ! "
+      "rtpjitterbuffer name=rtpjitterbuffer ! "
+      "rtph264depay name=rtph264depay ! "
+      "h264parse name=h264parse ! "
+      "splitmuxsink name=splitmuxsink location=%s%%02d.mp4 "
+      "max-size-time=300000000000 max-size-bytes=500000000", // 30 minutes, 500
+                                                             // MB
+      argv[1], argv[2]);
 
   printf("pipeline_desc: %s\n", pipeline_desc);
 
