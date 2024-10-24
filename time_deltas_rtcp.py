@@ -8,12 +8,12 @@ with open("time_deltas_rtcp.txt", "r") as f:
     for line in f:
         parts = line.split(": ")
         frame_number = int(parts[0])
-        timedelta = float(parts[1])
+        timedelta = float(parts[-1])
 
         # Apply the filter for timedelta values
         if -0.1 <= timedelta <= 0.1:
-            x.append(frame_number / 29)
-            y.append(timedelta * 1000)
+            x.append(frame_number / 29) # 29 FPS
+            y.append(timedelta * 1000) # s to ms
 
 print(f"Collected {len(x)} frames")
 
