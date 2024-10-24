@@ -65,6 +65,12 @@ def navigate_frames(main_video, secondary_video, main_timestamps, secondary_time
         elif key == ord("b"):
             main_frame_idx = min(len(main_timestamps) - 1, main_frame_idx - 10)
             print("Backward frame", main_frame_idx)
+        elif key == ord("l"):
+            main_frame_idx = max(0, main_frame_idx + 100)
+            print("Forward frame", main_frame_idx)
+        elif key == ord("h"):
+            main_frame_idx = min(len(main_timestamps) - 1, main_frame_idx - 100)
+            print("Backward frame", main_frame_idx)
 
     main_video.release()
     secondary_video.release()
@@ -73,8 +79,8 @@ def navigate_frames(main_video, secondary_video, main_timestamps, secondary_time
 
 if __name__ == "__main__":
     # Load the videos
-    main_video_path = "./build/macosx/arm64/debug/c0201.mp4"
-    secondary_video_path = "./build/macosx/arm64/debug/c0101.mp4"
+    main_video_path = "./build/macosx/arm64/debug/f101.mp4"
+    secondary_video_path = "./build/macosx/arm64/debug/f201.mp4"
 
     main_video = cv2.VideoCapture(main_video_path)
     secondary_video = cv2.VideoCapture(secondary_video_path)
