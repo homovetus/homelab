@@ -7,6 +7,19 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <time.h>
+
+#define NTP_TIMESTAMP_DELTA 2208988800ULL
+
+struct timespec ntp_to_timespec(guint64 ntp_time) {
+  guint32 ntp_seconds = (ntp_time >> 32);
+  guint32 ntp_fraction = ntp_time & 0xFFFFFFFF;
+
+  struct timespec ts;
+  ts.tv_sec = ntp_seconds - NTP_TIMESTAMP_DELTA;
+  ts.tv_nsec = (double)ntp_fraction * 1.0e6 / (double)(1LL << 32);
+  return ts;
+}
 
 typedef struct {
   GstElement *pipeline;
@@ -14,28 +27,10 @@ typedef struct {
 
   guint64 rtcp_ntp;
   guint32 rtcp_rtp;
-  gdouble last_timestamp;
+  gdouble current_frame_timestamp;
 } UserData;
 
 static UserData user_data;
-
-/* UnixTime equivalent structure for C */
-typedef struct {
-  gint sec;
-  gint usec;
-} UnixTime;
-
-static UnixTime unix_time;
-
-/* Helper to convert NTP to datetime */
-void convert_ntp_to_datetime(guint64 ntp_timestamp) {
-  if (ntp_timestamp > 0) {
-    guint32 ntp_seconds = (ntp_timestamp >> 32);
-    guint32 ntp_fraction = ntp_timestamp & 0xFFFFFFFF;
-    unix_time.sec = ntp_seconds - 2208988800U; // Convert NTP to Unix time
-    unix_time.usec = (ntp_fraction * 1000000ULL) >> 32;
-  }
-}
 
 /* Callback for receiving RTCP packets */
 static void on_receiving_rtcp_callback(GstElement *session, GstBuffer *buffer, gpointer user_data) {
@@ -52,7 +47,14 @@ static void on_receiving_rtcp_callback(GstElement *session, GstBuffer *buffer, g
       guint32 ssrc;
       guint32 packet_count;
       guint32 octet_count;
+      guint64 last_ntp = udata->rtcp_ntp;
       gst_rtcp_packet_sr_get_sender_info(&rtcp_packet, &ssrc, &udata->rtcp_ntp, &udata->rtcp_rtp, &packet_count, &octet_count);
+      // print log if difference is more than 1 second
+      if (udata->rtcp_ntp - last_ntp > 1000000000) {
+        struct timespec ts = ntp_to_timespec(udata->rtcp_ntp);
+        g_print("Received SR NTP: %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
+        g_print("Received SR RTP: %u\n", udata->rtcp_rtp);
+      }
     }
     next_packet = gst_rtcp_packet_move_to_next(&rtcp_packet);
   }
@@ -73,13 +75,16 @@ static GstPadProbeReturn frame_callback(GstPad *pad, GstPadProbeInfo *info, gpoi
   gboolean marker_bit = gst_rtp_buffer_get_marker(&rtp_buffer);
 
   if (marker_bit) {
+    struct timespec ts = ntp_to_timespec(udata->rtcp_ntp);
     guint32 rtp_timestamp = gst_rtp_buffer_get_timestamp(&rtp_buffer);
     gdouble rtp_diff = (gdouble)(rtp_timestamp - udata->rtcp_rtp) / 90000.0;
 
-    convert_ntp_to_datetime(udata->rtcp_ntp);
-
-    gdouble timestamp = unix_time.sec + (unix_time.usec / 1000000.0) + rtp_diff;
-    udata->last_timestamp = timestamp;
+    gdouble timestamp = ts.tv_sec + (ts.tv_nsec / 1000000.0) + rtp_diff;
+    gdouble diff = timestamp - udata->current_frame_timestamp;
+    if (diff > 0.5 || diff < 0) {
+      printf("diff: %lf\n", diff);
+    }
+    udata->current_frame_timestamp = timestamp;
 
     g_print("Timestamp: %lf, NTP: %llu, RTP: %u, RTP header timestamp: %u, Marker: %d\n",
             timestamp, udata->rtcp_ntp, udata->rtcp_rtp, rtp_timestamp, marker_bit);
@@ -134,8 +139,8 @@ static GstPadProbeReturn inject_sei_cb(GstPad *pad, GstPadProbeInfo *info, gpoin
   memcpy(udu->uuid, uuid, sizeof(uuid));
 
   // data is the last_timestamp
-  udu->data = (guint8 *)&udata->last_timestamp;
-  udu->size = sizeof(udata->last_timestamp);
+  udu->data = (guint8 *)&udata->current_frame_timestamp;
+  udu->size = sizeof(udata->current_frame_timestamp);
 
   sei_data = g_array_new(FALSE, FALSE, sizeof(sei_msg));
   g_array_append_vals(sei_data, &sei_msg, 1);
@@ -243,7 +248,7 @@ int main_func(int argc, char *argv[]) {
     gst_h264_nal_parser_free(user_data.h264_nal_parser);
     gst_element_set_state(user_data.pipeline, GST_STATE_NULL);
     gst_object_unref(user_data.pipeline);
-    g_print("Freed");
+    g_print("Exiting");
   }
 
   return 0;
