@@ -2,9 +2,9 @@ add_rules("mode.debug", "mode.release")
 add_requires("pkgconfig::gstreamer-1.0")
 add_requires("pkgconfig::gstreamer-rtp-1.0")
 
-target("console") do
+target("sync-record") do
     set_kind("binary")
-    add_files("rtcp.c")
+    add_files("rtcp.c", "meta.c")
     add_packages("pkgconfig::gstreamer-1.0")
     add_packages("pkgconfig::gstreamer-rtp-1.0")
     add_ldflags("-lgstcodecparsers-1.0", {force=true})
