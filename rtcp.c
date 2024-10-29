@@ -67,12 +67,16 @@ GstPadProbeReturn calculate_timestamp(GstPad *pad, GstPadProbeInfo *info, gpoint
   if (marker_bit) {
     struct timespec ts = ntp_s2timespec(udata->rtcp_ntp);
     guint32 rtp_timestamp = gst_rtp_buffer_get_timestamp(&rtp_buffer);
-    gdouble rtp_diff = (gdouble)(rtp_timestamp - udata->rtcp_rtp) / 90000.0;
+    gdouble rtp_diff = ((gdouble)rtp_timestamp - (gdouble)udata->rtcp_rtp) / 90000.0;
 
     gdouble timestamp = ts.tv_sec + (ts.tv_nsec / 1000000.0) + rtp_diff;
     gdouble diff = timestamp - udata->current_frame_timestamp;
-    if (diff < 0) {
+    if (diff < 0 || diff > 1) {
+      // Print all intermidiate values
       g_print("diff: %lf\n\n", diff);
+      // g_print("tv_sec: %ld\n", ts.tv_sec);
+      // g_print("tv_nsec: %ld\n", ts.tv_nsec);
+      // g_print("RTP diff: %lf\n", rtp_diff);
     }
     udata->current_frame_timestamp = timestamp;
 
@@ -99,17 +103,16 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
     }
 
     GstReferenceTimestampMeta *time = gst_buffer_get_reference_timestamp_meta(buffer, NULL);
-    if (!time) {
-      g_printerr("Failed to get reference timestamp meta\n");
-      gst_buffer_unmap(buffer, &map_info);
-      return GST_PAD_PROBE_OK;
+    if (time) {
+      struct timespec ts = ntp_ns2timespec(time->timestamp);
+      timestamp = ts.tv_sec + (ts.tv_nsec / 1e9);
+      g_print("Injecting SEI NTP: %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
+      g_print("Diff: %lf\n", timestamp - udata->current_frame_timestamp);
+    } else {
+      g_printerr("Failed to get reference timestamp meta, fallback to last known\n");
+      g_print("Injecting SEI NTP: %lf\n", udata->current_frame_timestamp);
+      timestamp = udata->current_frame_timestamp;
     }
-
-    // timestamp = time->timestamp;
-    struct timespec ts = ntp_ns2timespec(time->timestamp);
-    timestamp = ts.tv_sec + (ts.tv_nsec / 1e9);
-    // g_print("timestamp: %lf\n", timestamp);
-    g_print("Injecting SEI NTP: %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
 
     gst_buffer_unmap(buffer, &map_info);
   }
@@ -126,8 +129,8 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
                              0x89, 0x81,
                              0x34, 0xf2, 0x29, 0x18, 0x08, 0x50};
     memcpy(udu->uuid, uuid, sizeof(uuid));
-    udu->data = (guint8 *)&timestamp;
-    udu->size = sizeof(timestamp);
+    udu->data = (guint8 *)&udata->current_frame_timestamp;
+    udu->size = sizeof(udata->current_frame_timestamp);
 
     GArray *sei_data = g_array_new(FALSE, FALSE, sizeof(sei_msg));
     g_array_append_vals(sei_data, &sei_msg, 1);

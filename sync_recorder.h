@@ -6,7 +6,7 @@
 
 #define NTP_TIMESTAMP_DELTA 2208988800ULL
 
-struct timespec ntp_s2timespec(guint64 ntp_time) {
+static inline struct timespec ntp_s2timespec(guint64 ntp_time) {
   guint32 ntp_seconds = (ntp_time >> 32);
   guint32 ntp_fraction = ntp_time & 0xFFFFFFFF;
 
@@ -16,7 +16,7 @@ struct timespec ntp_s2timespec(guint64 ntp_time) {
   return ts;
 }
 
-struct timespec ntp_ns2timespec(guint64 ntp_time) {
+static inline struct timespec ntp_ns2timespec(guint64 ntp_time) {
   guint64 ntp_seconds = ntp_time / 1000000000;
   guint64 ntp_nanoseconds = ntp_time % 1000000000;
 
