@@ -70,14 +70,6 @@ GstPadProbeReturn calculate_timestamp(GstPad *pad, GstPadProbeInfo *info, gpoint
     gdouble rtp_diff = ((gdouble)rtp_timestamp - (gdouble)udata->rtcp_rtp) / 90000.0;
 
     gdouble timestamp = ts.tv_sec + (ts.tv_nsec / 1000000.0) + rtp_diff;
-    gdouble diff = timestamp - udata->current_frame_timestamp;
-    if (diff < 0 || diff > 1) {
-      // Print all intermidiate values
-      g_print("diff: %lf\n\n", diff);
-      // g_print("tv_sec: %ld\n", ts.tv_sec);
-      // g_print("tv_nsec: %ld\n", ts.tv_nsec);
-      // g_print("RTP diff: %lf\n", rtp_diff);
-    }
     udata->current_frame_timestamp = timestamp;
 
     g_print("Timestamp: %lf, RTCP NTP: %llu, RTCP RTP: %u, RTP: %u, Marker: %d\n",
@@ -107,7 +99,6 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
       struct timespec ts = ntp_ns2timespec(time->timestamp);
       timestamp = ts.tv_sec + (ts.tv_nsec / 1e9);
       g_print("Injecting SEI NTP: %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
-      g_print("Diff: %lf\n", timestamp - udata->current_frame_timestamp);
     } else {
       g_printerr("Failed to get reference timestamp meta, fallback to last known\n");
       g_print("Injecting SEI NTP: %lf\n", udata->current_frame_timestamp);
@@ -162,12 +153,16 @@ int main_func(int argc, char *argv[]) {
 
   { // Initialize the GStreamer library, build gstreamer elements in UserData
     gst_init(&argc, &argv);
-    gchar *pipeline_desc = g_strdup_printf("rtspsrc name=rtspsrc protocols=tcp add-reference-timestamp-meta=true location=%s ! "
-                                           "rtpjitterbuffer name=rtpjitterbuffer ! "
-                                           "rtph264depay name=rtph264depay ! "
-                                           "h264parse name=h264parse ! "
-                                           "splitmuxsink name=splitmuxsink location=%s%%02d.mp4 max-size-time=300000000000 max-size-bytes=500000000", // 30 minutes, 500 MB
-                                           argv[1], argv[2]);
+    gchar *pipeline_desc = g_strdup_printf(
+        // RTCP source URL
+        "rtspsrc name=rtspsrc protocols=tcp add-reference-timestamp-meta=true location=%s "
+        // Output file
+        "splitmuxsink name=splitmuxsink max-size-time=300000000000 max-size-bytes=0 location=%s%%02d.mp4 " // 30 minutes
+        // Video
+        "rtspsrc. ! rtpjitterbuffer ! rtph264depay name=rtph264depay ! h264parse name=h264parse ! splitmuxsink. "
+        // Audio
+        "rtspsrc. ! rtpmp4gdepay ! aacparse ! queue ! splitmuxsink.audio_0 ",
+        argv[1], argv[2]);
     g_print("pipeline_desc: %s\n", pipeline_desc);
     user_data.pipeline = gst_parse_launch(pipeline_desc, NULL);
     g_free(pipeline_desc);
