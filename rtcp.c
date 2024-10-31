@@ -87,6 +87,7 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
   gdouble timestamp;
 
+#ifdef ENABLE_GST_TIMESTAMP_META
   { // Get frame timestamp from metadata
     GstMapInfo map_info;
     if (!gst_buffer_map(buffer, &map_info, GST_MAP_READ)) {
@@ -107,6 +108,11 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
 
     gst_buffer_unmap(buffer, &map_info);
   }
+#else
+  { // Use the last known frame timestamp from calculate_timestamp()
+    timestamp = udata->current_frame_timestamp;
+  }
+#endif
 
   { // Inject SEI
     GstH264SEIMessage sei_msg;
@@ -120,8 +126,8 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
                              0x89, 0x81,
                              0x34, 0xf2, 0x29, 0x18, 0x08, 0x50};
     memcpy(udu->uuid, uuid, sizeof(uuid));
-    udu->data = (guint8 *)&udata->current_frame_timestamp;
-    udu->size = sizeof(udata->current_frame_timestamp);
+    udu->data = (guint8 *)&timestamp;
+    udu->size = sizeof(timestamp);
 
     GArray *sei_data = g_array_new(FALSE, FALSE, sizeof(sei_msg));
     g_array_append_vals(sei_data, &sei_msg, 1);
