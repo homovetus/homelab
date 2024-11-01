@@ -48,29 +48,31 @@ def navigate_frames(main_video, secondary_video, main_timestamps, secondary_time
         # Display the frames side by side
         show_frames(main_frame, secondary_frame)
 
-        # Wait for key press (left: go back, right: go forward, q: quit)
+        # Wait for key press
         key = cv2.waitKey(0)
 
         if key == ord("q"):  # Quit
             break
-        elif key == ord("n"):
-            main_frame_idx = max(0, main_frame_idx + 1)
-            print("Next frame", main_frame_idx)
-        elif key == ord("p"):
+        elif key == ord("e"):
             main_frame_idx = min(len(main_timestamps) - 1, main_frame_idx - 1)
             print("Previous frame", main_frame_idx)
+        elif key == ord("r"):
+            main_frame_idx = max(0, main_frame_idx + 1)
+            print("Next frame", main_frame_idx)
+        elif key == ord("d"):
+            main_frame_idx = min(len(main_timestamps) - 1, main_frame_idx - 10)
+            print("Backward frame", main_frame_idx)
         elif key == ord("f"):
             main_frame_idx = max(0, main_frame_idx + 10)
             print("Forward frame", main_frame_idx)
-        elif key == ord("b"):
-            main_frame_idx = min(len(main_timestamps) - 1, main_frame_idx - 10)
-            print("Backward frame", main_frame_idx)
-        elif key == ord("l"):
-            main_frame_idx = max(0, main_frame_idx + 100)
-            print("Forward frame", main_frame_idx)
-        elif key == ord("h"):
+        elif key == ord("c"):
             main_frame_idx = min(len(main_timestamps) - 1, main_frame_idx - 100)
             print("Backward frame", main_frame_idx)
+        elif key == ord("v"):
+            main_frame_idx = max(0, main_frame_idx + 100)
+            print("Forward frame", main_frame_idx)
+        else:
+            continue
 
     main_video.release()
     secondary_video.release()
