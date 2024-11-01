@@ -26,13 +26,18 @@ static inline struct timespec ntp_ns2timespec(guint64 ntp_time) {
   return ts;
 }
 
+typedef struct RTPTimeinfo {
+  gdouble unix_timestamp;
+  guint64 rtcp_ntp;
+  guint32 rtcp_rtp;
+  guint32 frame_rtp;
+} RTPTimeInfo;
+
 typedef struct {
   GstElement *pipeline;
   GstH264NalParser *h264_nal_parser;
 
-  guint64 rtcp_ntp;
-  guint32 rtcp_rtp;
-  gdouble current_frame_timestamp;
+  RTPTimeInfo time_meta;
 } UserData;
 
 void register_rtcp_callback(GstElement *rtspsrc, GstElement *manager, gpointer user_data);

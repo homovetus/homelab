@@ -41,10 +41,11 @@ void update_rtcp_ntp(GstElement *session, GstBuffer *buffer, gpointer user_data)
       guint32 ssrc;
       guint32 packet_count;
       guint32 octet_count;
-      gst_rtcp_packet_sr_get_sender_info(&rtcp_packet, &ssrc, &udata->rtcp_ntp, &udata->rtcp_rtp, &packet_count, &octet_count);
-      struct timespec ts = ntp_s2timespec(udata->rtcp_ntp);
+      gst_rtcp_packet_sr_get_sender_info(&rtcp_packet, &ssrc, &udata->time_meta.rtcp_ntp, &udata->time_meta.rtcp_rtp,
+                                         &packet_count, &octet_count);
+      struct timespec ts = ntp_s2timespec(udata->time_meta.rtcp_ntp);
       g_print("Received SR NTP: %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
-      g_print("Received SR RTP: %u\n", udata->rtcp_rtp);
+      g_print("Received SR RTP: %u\n", udata->time_meta.rtcp_rtp);
     }
     next_packet = gst_rtcp_packet_move_to_next(&rtcp_packet);
   }
@@ -65,15 +66,16 @@ GstPadProbeReturn calculate_timestamp(GstPad *pad, GstPadProbeInfo *info, gpoint
   gboolean marker_bit = gst_rtp_buffer_get_marker(&rtp_buffer);
 
   if (marker_bit) {
-    struct timespec ts = ntp_s2timespec(udata->rtcp_ntp);
+    struct timespec ts = ntp_s2timespec(udata->time_meta.rtcp_ntp);
     guint32 rtp_timestamp = gst_rtp_buffer_get_timestamp(&rtp_buffer);
-    gdouble rtp_diff = ((gdouble)rtp_timestamp - (gdouble)udata->rtcp_rtp) / 90000.0;
-
+    gdouble rtp_diff = ((gdouble)rtp_timestamp - (gdouble)udata->time_meta.rtcp_rtp) / 90000.0;
     gdouble timestamp = ts.tv_sec + (ts.tv_nsec / 1000000.0) + rtp_diff;
-    udata->current_frame_timestamp = timestamp;
 
-    g_print("Timestamp: %lf, RTCP NTP: %llu, RTCP RTP: %u, RTP: %u, Marker: %d\n",
-            timestamp, udata->rtcp_ntp, udata->rtcp_rtp, rtp_timestamp, marker_bit);
+    udata->time_meta.frame_rtp = rtp_timestamp;
+    udata->time_meta.unix_timestamp = timestamp;
+
+    g_print("Timestamp: %lf, RTCP NTP: %llu, RTCP RTP: %u, RTP: %u\n", timestamp, udata->time_meta.rtcp_ntp,
+            udata->time_meta.rtcp_rtp, udata->time_meta.frame_rtp);
   }
 
   gst_rtp_buffer_unmap(&rtp_buffer);
@@ -85,7 +87,6 @@ GstPadProbeReturn calculate_timestamp(GstPad *pad, GstPadProbeInfo *info, gpoint
 GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
   UserData *udata = (UserData *)user_data;
   GstBuffer *buffer = GST_PAD_PROBE_INFO_BUFFER(info);
-  gdouble timestamp;
 
 #ifdef ENABLE_GST_TIMESTAMP_META
   { // Get frame timestamp from metadata
@@ -98,19 +99,13 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
     GstReferenceTimestampMeta *time = gst_buffer_get_reference_timestamp_meta(buffer, NULL);
     if (time) {
       struct timespec ts = ntp_ns2timespec(time->timestamp);
-      timestamp = ts.tv_sec + (ts.tv_nsec / 1e9);
-      g_print("Injecting SEI NTP: %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
+      udata->time_meta.unix_timestamp = ts.tv_sec + (ts.tv_nsec / 1e9);
     } else {
-      g_printerr("Failed to get reference timestamp meta, fallback to last known\n");
-      g_print("Injecting SEI NTP: %lf\n", udata->current_frame_timestamp);
-      timestamp = udata->current_frame_timestamp;
+      g_printerr("Failed to get reference timestamp meta, fallback to original\n");
+      g_print("Injecting Timestamp: %lf\n", udata->time_meta.unix_timestamp);
     }
 
     gst_buffer_unmap(buffer, &map_info);
-  }
-#else
-  { // Use the last known frame timestamp from calculate_timestamp()
-    timestamp = udata->current_frame_timestamp;
   }
 #endif
 
@@ -120,14 +115,10 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
     sei_msg.payloadType = GST_H264_SEI_USER_DATA_UNREGISTERED;
     GstH264UserDataUnregistered *udu = &sei_msg.payload.user_data_unregistered;
     // UUID: 96dac8c1-d1cb-42e4-8981-34f229180850
-    guint8 const uuid[16] = {0x96, 0xda, 0xc8, 0xc1,
-                             0xd1, 0xcb,
-                             0x42, 0xe4,
-                             0x89, 0x81,
-                             0x34, 0xf2, 0x29, 0x18, 0x08, 0x50};
+    guint8 const uuid[16] = {0x96, 0xda, 0xc8, 0xc1, 0xd1, 0xcb, 0x42, 0xe4, 0x89, 0x81, 0x34, 0xf2, 0x29, 0x18, 0x08, 0x50};
     memcpy(udu->uuid, uuid, sizeof(uuid));
-    udu->data = (guint8 *)&timestamp;
-    udu->size = sizeof(timestamp);
+    udu->data = (guint8 *)&udata->time_meta;
+    udu->size = sizeof(udata->time_meta);
 
     GArray *sei_data = g_array_new(FALSE, FALSE, sizeof(sei_msg));
     g_array_append_vals(sei_data, &sei_msg, 1);
@@ -147,9 +138,7 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
   return GST_PAD_PROBE_OK;
 }
 
-static void handle_sigint(int signum) {
-  gst_element_send_event(user_data.pipeline, gst_event_new_eos());
-}
+static void handle_sigint(int signum) { gst_element_send_event(user_data.pipeline, gst_event_new_eos()); }
 
 int main_func(int argc, char *argv[]) {
   if (argc < 3) {
@@ -167,7 +156,7 @@ int main_func(int argc, char *argv[]) {
         // Video
         "rtspsrc. ! rtpjitterbuffer ! rtph264depay name=rtph264depay ! h264parse name=h264parse ! splitmuxsink. "
         // Audio
-        "rtspsrc. ! rtpmp4gdepay ! aacparse ! queue ! splitmuxsink.audio_0 ",
+        "rtspsrc. ! rtpjitterbuffer ! rtpmp4gdepay ! aacparse ! queue ! splitmuxsink.audio_0 ",
         argv[1], argv[2]);
     g_print("pipeline_desc: %s\n", pipeline_desc);
     user_data.pipeline = gst_parse_launch(pipeline_desc, NULL);
