@@ -3,13 +3,18 @@ import os
 from uuid import UUID
 import struct
 
-path = "./build/macosx/arm64/debug/100.mp4"
+path = "./build/macosx/arm64/debug/j101.mp4"
+basename = os.path.splitext(path)[0]
 
 # remove extension and add .txt at the end, so we can save it in the same folder
-timestamp_path = os.path.splitext(path)[0] + ".txt"
-timestamp_interpolated_path = os.path.splitext(path)[0] + "_interpolated.txt"
+timestamp_path = basename + ".txt"
+timestamp_RTP_interpolated_path = basename + "_RTP_interpolated.txt"
+timestamp_interpolated_path = basename + "_interpolated.txt"
+mata_path = basename + "_meta.txt"
 print(f"timestamp out: {timestamp_path}")
+print(f"timestamp_RTP_interpolated out: {timestamp_RTP_interpolated_path}")
 print(f"timestamp_interpolated out: {timestamp_interpolated_path}")
+print(f"meta out: {mata_path}")
 
 container = av.open(path)
 stream = container.streams.video[0]
@@ -42,6 +47,14 @@ for packet in container.demux(stream):
             )
 
             rtp_time_infos.append((unix_timestamp, rtcp_ntp, rtcp_rtp, frame_rtp))
+
+# Save meta data to meta_path
+with open(mata_path, "w") as f:
+    for rtp_time_info in rtp_time_infos:
+        f.write(
+            f"{rtp_time_info[0]} {rtp_time_info[1]} {rtp_time_info[2]} {rtp_time_info[3]}\n"
+        )
+
 
 # Save unix_timestamp to timestamp_path
 with open(timestamp_path, "w") as f:
@@ -83,18 +96,18 @@ def current_rtcp(index):
     return 0
 
 
-interpolated_timestamps = []
+RTP_interpolated_timestamps = []
 for i in range(len(rtp_time_infos)):
     current_rtp = rtp_time_infos[i][3]
-    next_rtcp_index = next_rtcp(i)
     current_rtcp_index = current_rtcp(i)
+    next_rtcp_index = next_rtcp(i)
     current_rtcp_ntp = rtp_time_infos[i][1]
     next_rtcp_ntp = rtp_time_infos[next_rtcp_index][1]
     current_rtcp_rtp = rtp_time_infos[current_rtcp_index][2]
     next_rtcp_rtp = rtp_time_infos[next_rtcp_index][2]
 
     if current_rtcp_ntp == next_rtcp_ntp:
-        interpolated_timestamps.append(rtp_time_infos[i][0])
+        RTP_interpolated_timestamps.append(rtp_time_infos[i][0])
         continue
     ratio = (current_rtp - current_rtcp_rtp) / (next_rtcp_rtp - current_rtcp_rtp)
 
@@ -106,9 +119,37 @@ for i in range(len(rtp_time_infos)):
     # Do interpolation using only ratio and current, next timestamps
     interpolated_timestamp = current_unix + (next_unix - current_unix) * ratio
 
-    interpolated_timestamps.append(interpolated_timestamp)
+    RTP_interpolated_timestamps.append(interpolated_timestamp)
 
 # Save the interpolated timestamps to a text file
+
+with open(timestamp_RTP_interpolated_path, "w") as f:
+    for timestamp in RTP_interpolated_timestamps:
+        f.write(f"{timestamp}\n")
+
+interpolated_timestamps = []
+for i in range(len(rtp_time_infos)):
+    current_rtcp_index = current_rtcp(i)
+    current_rtcp_ntp = rtp_time_infos[i][1]
+    next_rtcp_index = next_rtcp(i)
+    next_rtcp_ntp = rtp_time_infos[next_rtcp_index][1]
+
+    if current_rtcp_ntp == next_rtcp_ntp:
+        interpolated_timestamps.append(rtp_time_infos[i][0])
+        continue
+
+    ratio = (i - current_rtcp_index) / (next_rtcp_index - current_rtcp_index)
+
+    current_rtcp_ntp = rtp_time_infos[i][1]
+    next_rtcp_ntp = rtp_time_infos[next_rtcp_index][1]
+    current_unix = ntp2unix(current_rtcp_ntp)
+    current_unix = current_unix["tv_sec"] + current_unix["tv_nsec"] / 1e9
+    next_unix = ntp2unix(next_rtcp_ntp)
+    next_unix = next_unix["tv_sec"] + next_unix["tv_nsec"] / 1e9
+
+    # Do interpolation using only ratio and current, next timestamps
+    interpolated_timestamp = current_unix + (next_unix - current_unix) * ratio
+    interpolated_timestamps.append(interpolated_timestamp)
 
 with open(timestamp_interpolated_path, "w") as f:
     for timestamp in interpolated_timestamps:
