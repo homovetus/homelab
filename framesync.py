@@ -24,7 +24,7 @@ def show_frames(frame1, frame2):
 
 # Keyboard controls for navigation
 def navigate_frames(main_video, secondary_video, main_timestamps, secondary_timestamps):
-    main_frame_idx = 0
+    main_frame_idx = 3464
 
     while main_video.isOpened():
         # Set the video frame index based on the current position
@@ -45,6 +45,10 @@ def navigate_frames(main_video, secondary_video, main_timestamps, secondary_time
         if not ret_secondary:
             break
 
+        print(f"Main Frame timestamp: {main_timestamp}")
+        print(
+            f"Secondary Frame timestamp: {secondary_timestamps[closest_secondary_idx]}"
+        )
         # Display the frames side by side
         show_frames(main_frame, secondary_frame)
 
@@ -81,15 +85,19 @@ def navigate_frames(main_video, secondary_video, main_timestamps, secondary_time
 
 if __name__ == "__main__":
     # Load the videos
-    main_video_path = "./build/macosx/arm64/debug/f101.mp4"
-    secondary_video_path = "./build/macosx/arm64/debug/f201.mp4"
+    main_video_path = "./build/macosx/arm64/debug/j101.mp4"
+    secondary_video_path = "./build/macosx/arm64/debug/j201.mp4"
 
     main_video = cv2.VideoCapture(main_video_path)
     secondary_video = cv2.VideoCapture(secondary_video_path)
 
     # Load the timestamp files
-    main_timestamps_path = os.path.splitext(main_video_path)[0] + ".txt"
-    secondary_timestamps_path = os.path.splitext(secondary_video_path)[0] + ".txt"
+    # main_timestamps_path = os.path.splitext(main_video_path)[0] + ".txt"
+    # secondary_timestamps_path = os.path.splitext(secondary_video_path)[0] + ".txt"
+    # main_timestamps_path = os.path.splitext(main_video_path)[0] + "_RTP_interpolated.txt"
+    # secondary_timestamps_path = os.path.splitext(secondary_video_path)[0] + "_RTP_interpolated.txt"
+    main_timestamps_path = os.path.splitext(main_video_path)[0] + "_interpolated.txt"
+    secondary_timestamps_path = os.path.splitext(secondary_video_path)[0] + "_interpolated.txt"
     print(
         f"Loading timestamps from {main_timestamps_path} and {secondary_timestamps_path}"
     )

@@ -22,33 +22,47 @@ container = av.open(path)
 stream = container.streams.video[0]
 
 rtp_time_infos = []
-for packet in container.demux(stream):
-    for frame in packet.decode():
-        for sd in list(frame.side_data.keys()):
-            # Convert the side data to bytes
-            bts = bytes(sd)
-
-            # Extract the first 16 bytes as UUID
-            uuid_bts = bts[:16]
-            uuid_str = str(UUID(bytes=uuid_bts))
-
-            # Extract the bytes for the RTPTimeInfos, see sync_recorder.h
-            unix_timestamp = bts[16:24]  # 8 bytes for a double
-            rtcp_ntp = bts[24:32]  # 8 bytes for unsigned 64-bit integer
-            rtcp_rtp = bts[32:36]  # 4 bytes for unsigned 32-bit integer
-            frame_rtp = bts[36:40]  # 4 bytes for unsigned 32-bit integer
-
-            # Convert the byte data to a double using struct.unpack
-            unix_timestamp = struct.unpack("d", unix_timestamp)[0]
-            rtcp_ntp = struct.unpack("Q", rtcp_ntp)[0]
-            rtcp_rtp = struct.unpack("I", rtcp_rtp)[0]
-            frame_rtp = struct.unpack("I", frame_rtp)[0]
-            print(f"UUID: {uuid_str}")
-            print(
-                f"Unix Timestamp: {unix_timestamp}, RTCP NTP: {rtcp_ntp}, RTCP RTP: {rtcp_rtp}, Frame RTP: {frame_rtp}"
+# check if meta_path exists
+if os.path.exists(mata_path):
+    with open(mata_path, "r") as f:
+        for line in f.readlines():
+            data = line.strip().split(" ")
+            rtp_time_infos.append(
+                (
+                    float(data[0]),
+                    int(data[1]),
+                    int(data[2]),
+                    int(data[3]),
+                )
             )
+else:
+    for packet in container.demux(stream):
+        for frame in packet.decode():
+            for sd in list(frame.side_data.keys()):
+                # Convert the side data to bytes
+                bts = bytes(sd)
 
-            rtp_time_infos.append((unix_timestamp, rtcp_ntp, rtcp_rtp, frame_rtp))
+                # Extract the first 16 bytes as UUID
+                uuid_bts = bts[:16]
+                uuid_str = str(UUID(bytes=uuid_bts))
+
+                # Extract the bytes for the RTPTimeInfos, see sync_recorder.h
+                unix_timestamp = bts[16:24]  # 8 bytes for a double
+                rtcp_ntp = bts[24:32]  # 8 bytes for unsigned 64-bit integer
+                rtcp_rtp = bts[32:36]  # 4 bytes for unsigned 32-bit integer
+                frame_rtp = bts[36:40]  # 4 bytes for unsigned 32-bit integer
+
+                # Convert the byte data to a double using struct.unpack
+                unix_timestamp = struct.unpack("d", unix_timestamp)[0]
+                rtcp_ntp = struct.unpack("Q", rtcp_ntp)[0]
+                rtcp_rtp = struct.unpack("I", rtcp_rtp)[0]
+                frame_rtp = struct.unpack("I", frame_rtp)[0]
+                print(f"UUID: {uuid_str}")
+                print(
+                    f"Unix Timestamp: {unix_timestamp}, RTCP NTP: {rtcp_ntp}, RTCP RTP: {rtcp_rtp}, Frame RTP: {frame_rtp}"
+                )
+
+                rtp_time_infos.append((unix_timestamp, rtcp_ntp, rtcp_rtp, frame_rtp))
 
 # Save meta data to meta_path
 with open(mata_path, "w") as f:
@@ -136,7 +150,7 @@ for i in range(len(rtp_time_infos)):
     next_rtcp_index = next_rtcp(i)
     next_rtcp_ntp = rtp_time_infos[next_rtcp_index][1]
 
-    if current_rtcp_ntp == next_rtcp_ntp:
+    if current_rtcp_ntp == next_rtcp_ntp or current_rtcp_index == 0:
         interpolated_timestamps.append(rtp_time_infos[i][0])
         continue
 
