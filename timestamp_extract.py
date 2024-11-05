@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import av
 import os
 from uuid import UUID
