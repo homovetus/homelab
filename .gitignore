@@ -7,3 +7,4 @@
 build
 frigate/config/*
 frigate/storage/*
+tests
