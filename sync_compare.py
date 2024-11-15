@@ -52,8 +52,8 @@ def loop(main_timestamp, sub_timestamp, main_OCR, sub_OCR):
     return ret
 
 
-main_path = "./build/macosx/arm64/debug/j101.mp4"
-sub_path = "./build/macosx/arm64/debug/j201.mp4"
+main_path = "./build/macosx/arm64/debug/j102.mp4"
+sub_path = "./build/macosx/arm64/debug/j202.mp4"
 
 main_base_name = os.path.splitext(main_path)[0]
 sub_base_name = os.path.splitext(sub_path)[0]
@@ -78,6 +78,19 @@ r_interpolated = loop(main_interpolated, sub_interpolated, main_OCR, sub_OCR)
 print("RTP mean: ", statistics.mean(r_RTP))
 print("RTP interpolated mean: ", statistics.mean(r_RTP_interpolated))
 print("Interpolated mean: ", statistics.mean(r_interpolated))
+
+# Find mean for absolute differences
+r_RTP = [abs(i) for i in r_RTP]
+r_RTP_interpolated = [abs(i) for i in r_RTP_interpolated]
+r_interpolated = [abs(i) for i in r_interpolated]
+print("Absolute RTP mean: ", statistics.mean(r_RTP))
+print("Absolute RTP interpolated mean: ", statistics.mean(r_RTP_interpolated))
+print("Absolute interpolated mean: ", statistics.mean(r_interpolated))
+
+# Find variance
+print("RTP variance: ", statistics.variance(r_RTP))
+print("RTP interpolated variance: ", statistics.variance(r_RTP_interpolated))
+print("Interpolated variance: ", statistics.variance(r_interpolated))
 
 # plot the data
 plt.figure(figsize=(10, 6))
