@@ -10,7 +10,7 @@ args=(
         -avoid_negative_ts make_zero # Shift timestamps so that the first timestamp is 0.
         -fflags +genpts+discardcorrupt # Generate missing PTS if DTS is present. Discard corrupted packets.
         -rtsp_transport tcp # Use TCP for RTSP
-        -i "rtsp://onvif:password!@192.168.1.4:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
+        -i "rtsp://onvif:password!@192.168.0.136:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
 
         # Output
         -reset_timestamps 1 # Must have, otherwise recorded clips will be 10, 20, 30, 40 ... seconds long.
