@@ -109,7 +109,7 @@ def calculate_timestamp(pad, info):
             f"RTP in SR: {rtp_time}, RTP header timestamp: {rtp_buffer.get_timestamp()}, "
             f"Marker bit: {marker_bit}"
         )
-        timestamps.append(timestamp)
+        timestamps.append((timestamp, ntp_time, rtp_time, rtp_buffer.get_timestamp()))
 
     return Gst.PadProbeReturn.OK
 

@@ -7,7 +7,7 @@ gi.require_version("GstRtp", "1.0")
 gi.require_version("GstVideo", "1.0")
 gi.require_version("GLib", "2.0")
 
-from gi.repository import Gst, GstRtp, GstVideo, GLib
+from gi.repository import Gst, GstRtp, GLib
 
 # initialize GStreamer
 Gst.init(sys.argv[1:])
@@ -38,16 +38,16 @@ class RTSPPipeline:
 
         self.loop = GLib.MainLoop.new(None, False)
         self.pipeline = Gst.parse_launch(
-            " rtspsrc name=rtspsrc protocols=tcp location=rtsp://user:pass@127.0.0.1:8554/stream0 ! "
-            " rtpjitterbuffer name=rtpjitterbuffer ! "
+            # " rtspsrc name=rtspsrc protocols=tcp location=rtsp://user:pass@127.0.0.1:8554/stream0 ! "
+            " rtspsrc name=rtspsrc protocols=tcp location=rtsp://onvif:password!@192.168.0.13:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif ! "
+            " rtpjitterbuffer ! "
             " rtph264depay name=rtph264depay ! "
             " h264parse name=h264parse ! "
-            " splitmuxsink name=splitter location=video%02d.mp4 max-size-time=10000000000 max-size-bytes=1000000"
+            " splitmuxsink name=splitter location=video%02d.mp4 max-size-time=300000000000 max-size-bytes=0"
         )
         self.bus = self.pipeline.get_bus()
 
         self.rtspsrc = self.pipeline.get_by_name("rtspsrc")
-        self.rtpjitterbuffer = self.pipeline.get_by_name("rtpjitterbuffer")
         self.rtph264depay = self.pipeline.get_by_name("rtph264depay")
         self.h264parse = self.pipeline.get_by_name("h264parse")
 
@@ -56,9 +56,6 @@ class RTSPPipeline:
 
         depaysink = self.rtph264depay.get_static_pad("sink")
         depaysink.add_probe(Gst.PadProbeType.BUFFER, self.calculate_frame_timestamp)
-
-        # parsesrc = h264parse.get_static_pad("src")
-        # parsesrc.add_probe(Gst.PadProbeType.BUFFER, inject_sei)
 
     def start_pipeline(self):
         try:
@@ -77,14 +74,14 @@ class RTSPPipeline:
             print("Stopping pipeline")
             self.pipeline.set_state(Gst.State.NULL)
 
-            # # save the timestamps to a file
-            # print(f"Gathered {len(ntp_timestamps)} timestamps")
-            # print("last timestamp", ntp_timestamps[-1])
-            # time_file = open("timestamps.txt", "w")
-            # for ts in ntp_timestamps:
-            #     time_file.write(f"{ts}\n")
-            # time_file.flush()  # Ensure that data is written
-            # time_file.close()  # Close the file properly
+            # save the timestamps to a file
+            print(f"Gathered {len(self.ntp_timestamps)} timestamps")
+            print("last timestamp", self.ntp_timestamps[-1])
+            time_file = open("timestamps.txt", "w")
+            for ts in self.ntp_timestamps:
+                time_file.write(f"{ts}\n")
+            time_file.flush()  # Ensure that data is written
+            time_file.close()  # Close the file properly
 
     def on_new_manager_callback(rtspsrc, manager):
         """Callback triggered when the RTSP manager is created."""
@@ -145,26 +142,17 @@ class RTSPPipeline:
                 + float(self.unix_time.usec) / 1000000.0
                 + rtp_diff
             )
+            self.ntp_timestamps.append(
+                (self.rtcp_ntp, self.rtcp_rtp, rtp_buffer.get_timestamp())
+            )
+
             print(
                 f"Timestamp: {timestamp}, NTP in SR: {self.rtcp_ntp}, "
                 f"RTP in SR: {self.rtcp_rtp}, RTP header timestamp: {rtp_buffer.get_timestamp()}, "
                 f"Marker bit: {marker_bit}"
             )
-            self.ntp_timestamps.append(timestamp)
-
-        # If get over 200 timestamps, switch to the next file
-        if len(self.ntp_timestamps) > 200:
-            global timestamp_index
-            filename = f"timestamps{timestamp_index}.txt"
-            # save the timestamps to a file
-            print(f"Gathered {len(self.ntp_timestamps)} timestamps")
-            print("last timestamp", self.ntp_timestamps[-1])
-            time_file = open(filename, "w")
-            for ts in self.ntp_timestamps:
-                time_file.write(f"{ts}\n")
-            time_file.flush()
-            time_file.close()
-            self.ntp_timestamps.clear()
-            timestamp_index += 1
-
         return Gst.PadProbeReturn.OK
+
+
+pipeline = RTSPPipeline()
+pipeline.start_pipeline()
