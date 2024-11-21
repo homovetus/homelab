@@ -158,37 +158,34 @@ def test(
     RTP_diffs = [abs(i) for i in RTP_diffs]
     RTP_interpolated_diffs = [abs(i) for i in RTP_interpolated_diffs]
     interpolated_diffs = [abs(i) for i in interpolated_diffs]
+    once_diffs = [abs(i) for i in once_diffs]
     print(
-        "Absolute average time diff using RTP timestamp",
+        "Average absolute time diff using RTP timestamp",
         "{:.3f}".format(statistics.mean(RTP_diffs)),
     )
     print(
-        "Absolute RTP standard deviation: ",
-        "{:.3f}".format(statistics.stdev(RTP_diffs)),
-    )
-    print(
-        "Absolute average time diff using RTP interpolated timestamp",
+        "Average absolute time diff using RTP interpolated timestamp",
         "{:.3f}".format(statistics.mean(RTP_interpolated_diffs)),
     )
     print(
-        "Absolute RTP interpolated standard deviation: ",
-        "{:.3f}".format(statistics.stdev(RTP_interpolated_diffs)),
-    )
-    print(
-        "Absolute RTP interpolated standard deviation: ",
-        "{:.3f}".format(statistics.stdev(RTP_interpolated_diffs)),
-    )
-    print(
-        "Absolute average time diff using interpolated timestamp",
+        "Average absolute time diff using interpolated timestamp",
         "{:.3f}".format(statistics.mean(interpolated_diffs)),
     )
     print(
-        "Absolute Interpolated standard deviation: ",
+        "Average absolute time diff using once loop",
+        "{:.3f}".format(statistics.mean(once_diffs)),
+    )
+    print("RTP standard deviation: ", "{:.3f}".format(statistics.stdev(RTP_diffs)))
+    print(
+        "RTP interpolated standard deviation: ",
+        "{:.3f}".format(statistics.stdev(RTP_interpolated_diffs)),
+    )
+    print(
+        "Interpolated standard deviation: ",
         "{:.3f}".format(statistics.stdev(interpolated_diffs)),
     )
     print(
-        "Absolute average time diff using once loop",
-        "{:.3f}".format(statistics.mean(once_diffs)),
+        "Once loop standard deviation: ", "{:.3f}".format(statistics.stdev(once_diffs))
     )
     print()
 
