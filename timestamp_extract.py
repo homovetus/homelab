@@ -2,10 +2,22 @@
 
 import av
 import os
-from uuid import UUID
 import struct
+import sys
+from uuid import UUID
 
-path = "./build/macosx/arm64/debug/j101.mp4"
+# Parse filename from command line arguments
+if len(sys.argv) < 2:
+    print("Usage: python extractor <input_file_path>")
+    sys.exit(1)
+
+path = sys.argv[1]
+
+# Check if the input file exists
+if not os.path.exists(path):
+    print(f"Error: File '{path}' not found.")
+    sys.exit(1)
+
 basename = os.path.splitext(path)[0]
 
 # remove extension and add .txt at the end, so we can save it in the same folder
@@ -19,7 +31,6 @@ print(f"timestamp_interpolated out: {timestamp_interpolated_path}")
 print(f"meta out: {mata_path}")
 
 container = av.open(path)
-stream = container.streams.video[0]
 
 rtp_time_infos = []
 # check if meta_path exists
@@ -36,7 +47,8 @@ if os.path.exists(mata_path):
                 )
             )
 else:
-    for packet in container.demux(stream):
+    container.streams.video[0].thread_type = "AUTO"
+    for packet in container.demux():
         for frame in packet.decode():
             for sd in list(frame.side_data.keys()):
                 # Convert the side data to bytes
