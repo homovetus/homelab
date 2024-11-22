@@ -38,7 +38,7 @@ print(frame_timestamp(16918853004384289161, 2918953038, 2919382968))
 # RTP: the RTP timestamp for the frame, which is always increasing
 
 # Once we received a new RTCP SR, then the frame timestamp calculation will be based on new RTCP SR.
-# The rewind appears when we start using new RTCP SR.
+# The time rewind appears when we start using new RTCP SR.
 
 # Timestamp: 1730238639.572999, RTCP NTP: 16918853004384289161, RTCP RTP: 2918953038, RTP: 2919373968, Marker: 1
 # Timestamp: 1730238639.605999, RTCP NTP: 16918853004384289161, RTCP RTP: 2918953038, RTP: 2919376938, Marker: 1
