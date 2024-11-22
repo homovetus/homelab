@@ -99,7 +99,7 @@ The results are as follows:
 ![1080p 30FPS](./test/hd-boxplot.png)
 ![1080p 30FPS low bitrate](./test/hd-low-bit-boxplot.png)
 
-The scripts for generating these plots are available in the [test](./test) directory. The test videos are not included in this repository, but can be downloaded [here](https://drive.google.com/drive/folders/1).
+The scripts for generating these plots are available in the [test](./test) directory. The test videos are not included in this repository, but can be downloaded [here](https://drive.google.com/drive/folders/1qIzWJv_rcBqx15bp4oC86xy1X5J7hAKM?usp=sharing).
 
 In general, a sync with in 3 frames can be expected for 30FPS videos.
 
