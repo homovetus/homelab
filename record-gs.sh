@@ -10,7 +10,7 @@ args=(
     rtspsrc. ! rtpmp4gdepay ! aacparse ! queue ! mux.audio_0 # Audio stream
 
     # Muxing and output
-    splitmuxsink name=mux location=%s%%02d.mp4 max-size-time=300000000000 max-size-bytes=500000000 # 30 minutes, 500 MB
+    splitmuxsink name=mux location=%s%%02d.mp4 max-size-time=300000000000 max-size-bytes=500000000
 )
 
 # Start GStreamer to record RTSP stream
