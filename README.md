@@ -96,12 +96,17 @@ When the script finishes, it will generate 4 files:
 The level of syncing have been tested with Amcrest IP cameras using different video resolutions and frame rates. Two cameras were synchronized with the same local NTP server and recorded simultaneously.
 
 The results are as follows:
-![4K 30FPS](./test/4k-boxplot.png)
-![4K 10FPS](./test/4k-10hz-boxplot.png)
-![1080p 30FPS](./test/hd-boxplot.png)
-![1080p 30FPS low bitrate](./test/hd-low-bit-boxplot.png)
 
-The scripts for generating these plots are available in the [test](./test) directory. The test videos are not included in this repository, but can be downloaded [here](https://drive.google.com/drive/folders/1qIzWJv_rcBqx15bp4oC86xy1X5J7hAKM?usp=sharing).
+| Metric                      | RTP Timestamp | RTP Interpolated Timestamp | Interpolated Timestamp | Manual  |
+| --------------------------- | ------------- | -------------------------- | ---------------------- | ------- |
+| Average time diff           | -18.460       | -17.969                    | -18.499                | -31.533 |
+| Standard deviation          | 48.077        | 45.329                     | 41.053                 | 33.335  |
+| Absolute average time diff  | 40.458        | 38.538                     | 35.232                 | 37.135  |
+| Absolute standard deviation | 31.857        | 29.866                     | 28.034                 | 26.926  |
+
+![4K 30FPS](./test/4k-boxplot.png)
+
+For results of other resolutions and frame rates, refer to the [test](./test) directory, the scripts for generating these plot are also available in the same directory. The test videos are not included in this repository, but can be downloaded [here](https://drive.google.com/drive/folders/1qIzWJv_rcBqx15bp4oC86xy1X5J7hAKM?usp=sharing).
 
 In general, a sync with in 3 frames can be expected for 30FPS videos.
 
