@@ -2,7 +2,7 @@ add_rules("mode.debug", "mode.release")
 add_requires("pkgconfig::gstreamer-1.0")
 add_requires("pkgconfig::gstreamer-rtp-1.0")
 
-target("sync-record") do
+target("recorder") do
     set_kind("binary")
     set_warnings("all")
     add_files("recorder.c")

@@ -11,4 +11,4 @@ input_url='rtsp://onvif:password!@192.168.0.13:554/cam/realmonitor?channel=1&sub
 
 # Run command
 cd ../build/macosx/arm64/debug
-./sync-record "$input_url" "$output_arg"
+./recorder "$input_url" "$output_arg"
