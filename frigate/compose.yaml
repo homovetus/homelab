@@ -7,8 +7,8 @@ services:
     shm_size: "1024mb" # update for your cameras based on calculation above
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ./frigate/config:/config
-      - ./frigate/storage:/media/frigate
+      - ./config:/config
+      - ./storage:/media/frigate
       - type: tmpfs # Optional: 1GB of memory, reduces SSD/SD Card wear
         target: /tmp/cache
         tmpfs:
