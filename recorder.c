@@ -74,9 +74,13 @@ GstPadProbeReturn calculate_timestamp(GstPad *pad, GstPadProbeInfo *info, gpoint
 
     udata->time_meta.frame_rtp = rtp_timestamp;
     udata->time_meta.unix_timestamp = timestamp;
-
+#ifdef __APPLE__ // For macOS
     g_print("Timestamp: %lf, RTCP NTP: %llu, RTCP RTP: %u, RTP: %u\n", timestamp, udata->time_meta.rtcp_ntp,
             udata->time_meta.rtcp_rtp, udata->time_meta.frame_rtp);
+#else // Assume Linux
+    g_print("Timestamp: %lf, RTCP NTP: %lu, RTCP RTP: %u, RTP: %u\n", timestamp, udata->time_meta.rtcp_ntp,
+            udata->time_meta.rtcp_rtp, udata->time_meta.frame_rtp);
+#endif
   }
 
   gst_rtp_buffer_unmap(&rtp_buffer);

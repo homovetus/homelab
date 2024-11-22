@@ -18,31 +18,33 @@
 2. **Extractor**:
    - A Python script to extract timestamps from recorded video files.
 
-## Prerequisites
-
-### Recorder
-
-- **GStreamer Library**: required for RTSP stream handling. Tested with GStreamer version 1.24.9
-- **xmake**: build tool been used
-
-### Extractor
-
-- **Python 3.12**: tested with this version, but should work with other versions
-- **PyAV**: Python bindings for FFmpeg. Installation instructions are available on the [PyAV GitHub page](https://github.com/PyAV-Org/PyAV).
-
 ## Installation
 
-### GStreamer Installation
+### Prerequisites
 
-Install GStreamer using the package manager of your system:
-
-- **macOS**: Use [Homebrew](https://brew.sh/) with the command:
+- **GStreamer Library**: required for RTSP stream handling. Tested with GStreamer version 1.24.9
+  - **macOS**: Use [Homebrew](https://brew.sh/) with the command:
   ```sh
   brew install gstreamer
   ```
-- **Ubuntu**: Use `apt` with the command:
+  - **Ubuntu**: Use `apt` with the command:
   ```sh
-  sudo apt install libgstreamer1.0-dev
+  sudo apt install gstreamer1.0-plugins-bad gstreamer1.0-plugins-good gstreamer1.0-tools libgstreamer-plugins-bad1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev
+  ```
+- **Python**: tested with this 3.12, but should work with other versions
+- **PyAV**: Python bindings for FFmpeg. Installation instructions are available on the [PyAV GitHub page](https://github.com/PyAV-Org/PyAV).
+- **xmake**: build tool been used
+
+  - **macOS**:
+
+  ```sh
+  brew install xmake
+  ```
+
+  - **Ubuntu**:
+
+  ```sh
+  sudo apt install 7zip build-essential git xmake
   ```
 
 ### Build
