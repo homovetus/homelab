@@ -1,7 +1,7 @@
 #include <gst/rtp/rtp.h>
 #include <time.h>
 
-#include "sync_recorder.h"
+#include "recorder.h"
 
 UserData user_data;
 
