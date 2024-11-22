@@ -118,8 +118,8 @@ The tool assumes that the camera provides RTCP Sender Reports (SR). If the strea
 
 ### Framerate Stability
 
-Cameras may not shot frames at constant intervals. When testing with Amcrest IP cameras, the change in interval was reflected in the extracted timestamps, but not always. Among the tested results, using the interpolated method provided the lowest error and standard deviation. However, it is still recommended to test the results of using different timestamp calculation method mentioned in the [extractor](#extractor-1) section.
+Cameras may not shot frames at constant intervals. When testing with Amcrest IP cameras, the change in interval was reflected in the extracted timestamps, but not always. Among the tested results, using the interpolated method provided the lowest error and standard deviation. However, it is still recommended to test the results of using different timestamp calculation method mentioned in the [extractor](#extractor) section.
 
-Example of change in frame interval (1080P 10FPS):
+Example of change in frame interval (1080P 10FPS), as 47:956 is expected for the clock in the second screenshot:
 ![Change in frame interval](./test/interval_0.png)
 ![Change in frame interval](./test/interval_1.png)
