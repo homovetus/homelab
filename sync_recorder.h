@@ -1,5 +1,5 @@
-#ifndef SYNC_RECORDER_H
-#define SYNC_RECORDER_H
+#ifndef RECORDER_H
+#define RECORDER_H
 
 #include <gst/codecparsers/gsth264parser.h>
 #include <gst/gst.h>
@@ -34,6 +34,8 @@ typedef struct RTPTimeinfo {
 } RTPTimeInfo;
 
 typedef struct {
+  char *file_name_prefix;
+
   GstElement *pipeline;
   GstH264NalParser *h264_nal_parser;
 
@@ -44,5 +46,6 @@ void register_rtcp_callback(GstElement *rtspsrc, GstElement *manager, gpointer u
 void update_rtcp_ntp(GstElement *session, GstBuffer *buffer, gpointer user_data);
 GstPadProbeReturn calculate_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer user_data);
 GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer user_data);
+gchararray generate_file_name(GstElement *splitmux, guint fragment_id, gpointer user_data);
 
 #endif

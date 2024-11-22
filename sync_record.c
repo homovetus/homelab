@@ -1,4 +1,5 @@
 #include <gst/rtp/rtp.h>
+#include <time.h>
 
 #include "sync_recorder.h"
 
@@ -138,11 +139,21 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
   return GST_PAD_PROBE_OK;
 }
 
+gchararray generate_file_name(GstElement *splitmux, guint fragment_id, gpointer user_data) {
+  UserData *udata = (UserData *)user_data;
+  // Format: <prefix>_<YYYYMMDD_HHMM>.mp4
+  time_t now = time(NULL);
+  struct tm *tm = localtime(&now);
+  gchar *file_name = g_strdup_printf("%s_%04d%02d%02d_%02d%02d.mp4", udata->file_name_prefix, tm->tm_year + 1900,
+                                     tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min);
+  return file_name;
+}
+
 static void handle_sigint(int signum) { gst_element_send_event(user_data.pipeline, gst_event_new_eos()); }
 
 int main_func(int argc, char *argv[]) {
   if (argc < 3) {
-    g_printerr("Usage: %s <RTSP URL> <Output File Prefix>\n", argv[0]);
+    g_printerr("Usage: %s <RTSP_URL> <output_filename_without_extension>\n", argv[0]);
     return -1;
   }
 
@@ -152,7 +163,7 @@ int main_func(int argc, char *argv[]) {
         // RTCP source URL
         "rtspsrc name=rtspsrc protocols=tcp add-reference-timestamp-meta=true location=%s "
         // Output file
-        "splitmuxsink name=splitmuxsink max-size-time=300000000000 max-size-bytes=0 location=%s%%02d.mp4 " // 30 minutes
+        "splitmuxsink name=splitmuxsink max-size-time=300000000000 max-size-bytes=0 location=%s%%02d.mp4 " // 5 minutes
         // Video
         "rtspsrc. ! rtpjitterbuffer ! rtph264depay name=rtph264depay ! h264parse name=h264parse ! splitmuxsink. "
         // Audio
@@ -166,6 +177,7 @@ int main_func(int argc, char *argv[]) {
       return -1;
     }
 
+    user_data.file_name_prefix = argv[2];
     user_data.h264_nal_parser = gst_h264_nal_parser_new();
   }
 
@@ -173,15 +185,18 @@ int main_func(int argc, char *argv[]) {
     GstElement *rtspsrc = gst_bin_get_by_name(GST_BIN(user_data.pipeline), "rtspsrc");
     GstElement *rtph264depay = gst_bin_get_by_name(GST_BIN(user_data.pipeline), "rtph264depay");
     GstElement *h264parse = gst_bin_get_by_name(GST_BIN(user_data.pipeline), "h264parse");
+    GstElement *splitmuxsink = gst_bin_get_by_name(GST_BIN(user_data.pipeline), "splitmuxsink");
     GstPad *depaysink_pad = gst_element_get_static_pad(rtph264depay, "sink");
     GstPad *parsesrc_pad = gst_element_get_static_pad(h264parse, "src");
 
     g_signal_connect(rtspsrc, "new-manager", G_CALLBACK(register_rtcp_callback), &user_data);
+    g_signal_connect(splitmuxsink, "format-location", G_CALLBACK(generate_file_name), &user_data);
     gst_pad_add_probe(depaysink_pad, GST_PAD_PROBE_TYPE_BUFFER, calculate_timestamp, &user_data, NULL);
     gst_pad_add_probe(parsesrc_pad, GST_PAD_PROBE_TYPE_BUFFER, inject_timestamp, &user_data, NULL);
 
     gst_object_unref(parsesrc_pad);
     gst_object_unref(depaysink_pad);
+    gst_object_unref(splitmuxsink);
     gst_object_unref(h264parse);
     gst_object_unref(rtph264depay);
     gst_object_unref(rtspsrc);
