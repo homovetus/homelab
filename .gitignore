@@ -7,7 +7,6 @@
 build
 frigate/config/*
 frigate/storage/*
-test/*
-!test/*.py
-!test/*.png
-!test/*.md
+test/*.mp4
+test/q1
+test/q2

@@ -190,9 +190,7 @@ def test(
     print()
 
 
-test("test/4k-100.mp4", "test/4k-200.mp4", "4K 30Hz", 9, 7)
-test("test/4k-10hz-100.mp4", "test/4k-10hz-200.mp4", "4K 10Hz", 0, 0)
-test("test/hd-100.mp4", "test/hd-200.mp4", "HD 30Hz", 8, 9)
-test(
-    "test/hd-low-bit-100.mp4", "test/hd-low-bit-200.mp4", "HD Low Bitrate 30Hz", 21, 20
-)
+test("4k-100.mp4", "4k-200.mp4", "4K 30Hz", 9, 7)
+test("4k-10hz-100.mp4", "4k-10hz-200.mp4", "4K 10Hz", 0, 0)
+test("hd-100.mp4", "hd-200.mp4", "HD 30Hz", 8, 9)
+test("hd-low-bit-100.mp4", "hd-low-bit-200.mp4", "HD Low Bitrate 30Hz", 21, 20)

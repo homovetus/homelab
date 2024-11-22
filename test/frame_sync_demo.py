@@ -86,8 +86,8 @@ def navigate_frames(main_video, secondary_video, main_timestamps, secondary_time
 
 if __name__ == "__main__":
     # Load the videos
-    main_video_path = "test/hd-low-bit-100.mp4"
-    secondary_video_path = "test/hd-low-bit-200.mp4"
+    main_video_path = "hd-low-bit-100.mp4"
+    secondary_video_path = "hd-low-bit-200.mp4"
 
     main_video = cv2.VideoCapture(main_video_path)
     secondary_video = cv2.VideoCapture(secondary_video_path)

@@ -72,14 +72,11 @@ def ocr(video, x, y, w, h, start_frame_idx=0):
     video.release()
 
 
-# video_path = "test/hd-200.mp4"
-# ocr(video_path, x=640, y=220, w=530, h=70)
-
-video_path = "test/4k-10hz-100.mp4"
+video_path = "4k-10hz-100.mp4"
 ocr(video_path, x=1280, y=440, w=1060, h=140)
-video_path = "test/4k-10hz-200.mp4"
+video_path = "4k-10hz-200.mp4"
 ocr(video_path, x=1280, y=440, w=1060, h=140)
-video_path = "test/4k-100.mp4"
+video_path = "4k-100.mp4"
 ocr(video_path, x=1280, y=440, w=1060, h=140)
-video_path = "test/4k-200.mp4"
+video_path = "4k-200.mp4"
 ocr(video_path, x=1280, y=440, w=1060, h=140)
