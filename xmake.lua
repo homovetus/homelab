@@ -8,7 +8,7 @@ target("recorder") do
     add_files("recorder.c")
     add_packages("pkgconfig::gstreamer-1.0")
     add_packages("pkgconfig::gstreamer-rtp-1.0")
-    add_ldflags("-lgstcodecparsers-1.0", {force=true})
+    add_links("gstcodecparsers-1.0")
     if is_mode("debug") then
         add_defines("DEBUG")
     end
