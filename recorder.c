@@ -235,7 +235,7 @@ int main_func(int argc, char *argv[]) {
         g_print("End-Of-Stream reached.\n");
         break;
       default:
-        // Unreachable, only requested message types are ERROR and EOS
+        // Unreachable, requested message types are ERROR and EOS only
         g_printerr("Unexpected message received.\n");
         break;
       }
