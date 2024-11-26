@@ -27,7 +27,7 @@
   ```sh
   brew install gstreamer
   ```
-  - **Ubuntu**: Use `apt` with the command:
+  - **Ubuntu 24.04**: Use `apt` with the command:
   ```sh
   sudo apt install gstreamer1.0-plugins-bad gstreamer1.0-plugins-good gstreamer1.0-tools libgstreamer-plugins-bad1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev
   ```
