@@ -8,6 +8,14 @@
 - Embedding NTP timestamps from [RTCP Sender Reports](https://www4.cs.fau.de/Projects/JRTP/pmt/node83.html) into [H.264 User Data Unregistered SEI Message](https://learn.microsoft.com/en-us/openspecs/office_protocols/ms-h264pf/3d5fb9c1-efe8-4092-a60d-5321adce9c2e)
 - Synchronizing cameras if they have accurate internal clocks. (e.g., those are synchronized with NTP servers.)
 
+## Why
+
+When creating synchronized video footage from multiple cameras, the standard approach typically involves hardware-based synchronization methods. Examples include using [Genlock](https://en.wikipedia.org/wiki/Genlock) or custom solutions such as those provided by [Flir cameras](https://flir.custhelp.com/app/answers/detail/a_id/3385/~/flir-cameras---trigger-vs.-sync-vs.-record-start). While effective, these methods often demand specialized hardware, making them costly and less accessible.
+
+For vision tasks that do not require extremely precise synchronization, a more cost-effective alternative is to use timestamp information from the RTCP Sender Reports provided by network cameras.
+
+This tool offers a software-based solution for synchronizing network cameras using RTCP Sender Reports. It works with any camera supporting RTCP Sender Reports, a common feature in ONVIF-compatible cameras. With affordable options like 4K network cameras priced around $250, this approach provides a much more economical alternative to traditional hardware-based systems.
+
 ## Components
 
 **RTCP-NTP-Recorder** consists of two main components:
