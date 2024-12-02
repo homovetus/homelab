@@ -1,11 +1,4 @@
 cameras:
-  amcrest0:
-    enabled: true
-    ffmpeg:
-      inputs:
-        - path: rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif
-          roles:
-            - record
   amcrest1:
     enabled: true
     ffmpeg:
@@ -55,7 +48,6 @@ cameras:
         - path: rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif
           roles:
             - record
-
   amcrest8:
     enabled: true
     ffmpeg:
@@ -85,12 +77,12 @@ cameras:
           roles:
             - record
   amcrest12:
-  enabled: true
-  ffmpeg:
-    inputs:
-      - path: rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif
-        roles:
-          - record
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif
+          roles:
+            - record
   amcrest13:
     enabled: true
     ffmpeg:
@@ -106,6 +98,13 @@ cameras:
           roles:
             - record
   amcrest15:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif
+          roles:
+            - record
+  amcrest16:
     enabled: true
     ffmpeg:
       inputs:
