@@ -101,6 +101,8 @@ When the script finishes, it will generate 4 files:
 
 ## Docker
 
+A docker setup is also available for this project, which can be used to run the recorder. Extractor's docker setup is not provided as it is just a python script.
+
 ### Build Docker Image
 
 To build the Docker image, run the following command in the project directory:
@@ -146,7 +148,7 @@ In general, a sync with in 3 frames can be expected for 30FPS videos.
 
 ### RTCP Sender Reports
 
-The tool assumes that the camera provides RTCP Sender Reports (SR). If the stream does not provide SRs, this tool will not work. RTCP SR is required for ONVIF compatible cameras.
+The tool assumes that the camera provides RTCP Sender Reports (SR). If the stream does not provide SRs, this tool will not work. RTCP SR is required for ONVIF compatible cameras. To check if the camera send RTCP SR, the Wireshark can be a useful tool. ![Wireshark](./test/wireshark.png)
 
 ### Framerate Stability
 
