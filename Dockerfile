@@ -3,32 +3,28 @@ FROM ubuntu:24.04 AS build
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
+        7zip \
+        build-essential \
+        git \
         gstreamer1.0-plugins-bad \
         gstreamer1.0-plugins-good \
         gstreamer1.0-tools \
         libgstreamer-plugins-bad1.0-dev \
         libgstreamer-plugins-base1.0-dev \
         libgstreamer1.0-dev \
-        7zip \
-        build-essential \
-        git \
         xmake \
         && rm -rf /var/lib/apt/lists/*
-
-# Create a non-root user
-RUN useradd -m nonrootuser
 
 # Copy project files
 COPY . /app
 WORKDIR /app
 
-# Ensure non-root user has permissions to /app
+# Create a non-root user, and set the ownership
+RUN useradd -m nonrootuser
 RUN chown -R nonrootuser:nonrootuser /app
 
-# Switch to the non-root user
+# Switch to the non-root user to build the application
 USER nonrootuser
-
-# Build the recorder
 RUN xmake
 
 # Stage 2: Runtime stage
