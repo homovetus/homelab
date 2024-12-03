@@ -4,9 +4,9 @@
 
 **RTCP-NTP-Recorder** is a tool for recording RTSP streams while embedding precise timestamps into H.264 video frames using RTCP-provided NTP information. This tool can be used for:
 
-- Recording video and audio from RTSP streams
-- Embedding NTP timestamps from [RTCP Sender Reports](https://www4.cs.fau.de/Projects/JRTP/pmt/node83.html) into [H.264 User Data Unregistered SEI Message](https://learn.microsoft.com/en-us/openspecs/office_protocols/ms-h264pf/3d5fb9c1-efe8-4092-a60d-5321adce9c2e)
-- Synchronizing cameras if they have accurate internal clocks. (e.g., those are synchronized with NTP servers.)
+- Recording video and audio from RTSP streams.
+- Embedding NTP timestamps from [RTCP Sender Reports](https://www4.cs.fau.de/Projects/JRTP/pmt/node83.html) into [H.264 User Data Unregistered SEI Message](https://learn.microsoft.com/en-us/openspecs/office_protocols/ms-h264pf/3d5fb9c1-efe8-4092-a60d-5321adce9c2e).
+- Synchronizing cameras if they have accurate internal clocks (e.g., those synchronized with NTP servers).
 
 ## Why
 
@@ -30,7 +30,7 @@ This tool offers a software-based solution for synchronizing network cameras usi
 
 ### Prerequisites
 
-- **GStreamer Library**: required for RTSP stream handling. Tested with GStreamer version 1.24.9
+- **GStreamer Library**: Required for RTSP stream handling. Tested with GStreamer version 1.24.9.
   - **macOS**: Use [Homebrew](https://brew.sh/) with the command:
   ```sh
   brew install gstreamer
@@ -39,18 +39,14 @@ This tool offers a software-based solution for synchronizing network cameras usi
   ```sh
   sudo apt install gstreamer1.0-plugins-bad gstreamer1.0-plugins-good gstreamer1.0-tools libgstreamer-plugins-bad1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev
   ```
-- **Python**: tested with this 3.12, but should work with other versions
+- **Python**: Tested with version 3.12, but should work with other versions.
 - **PyAV**: Python bindings for FFmpeg. Installation instructions are available on the [PyAV GitHub page](https://github.com/PyAV-Org/PyAV).
-- **xmake**: build tool been used
-
+- **xmake**: Build tool used.
   - **macOS**:
-
   ```sh
   brew install xmake
   ```
-
   - **Ubuntu**:
-
   ```sh
   sudo apt install 7zip build-essential git xmake
   ```
@@ -96,8 +92,10 @@ When the script finishes, it will generate 4 files:
 
 - `<video_filename>_meta.txt`: Contains the extracted metadata for each frame, it is used to avoid re-extracting the metadata.
 - `<video_filename>.txt`: Contains the extracted timestamps, which is calculated by adding RTP relative time to NTP time in the most recent RTCP SR. Detailed math is described in [ntp_calc.py](./tools/ntp_calc.py)
-- `<video_filename>_RTP_interpolated.txt`: Contains the timestamps interpolated using two RTCP SR packets, this is used to avoid time rewinding in the previous method.
-- `<video_filename>_interpolated.txt`: Contains the timestamps interpolated using only RTCP SR packets and do not refer to the RTP timestamps. This method assumes each frame are equally spaced in time (Not always true for some cameras).
+- `<video_filename>_RTP_interpolated.txt`: Contains the timestamps interpolated using two RTCP SR packets, the ratio is based on RTP relative time, this is used to avoid time rewinding in the previous method.
+- `<video_filename>_interpolated.txt`: Contains the timestamps interpolated using only RTCP SR packets and do not refer to the RTP timestamps. This method assumes each frame are equally spaced in time (Not always true for some cameras). This method also ensure the timestamps are monotonically increasing.
+
+For more information about the timestamp calculation methods, please refer to the actuall [code](./extractor.py).
 
 ## Docker
 
@@ -152,8 +150,22 @@ The tool assumes that the camera provides RTCP Sender Reports (SR). If the strea
 
 ### Framerate Stability
 
-Cameras may not shot frames at constant intervals. When testing with Amcrest IP cameras, the change in interval was reflected in the extracted timestamps, but not always. Among the tested results, using the interpolated method provided the lowest error and standard deviation. However, it is still recommended to test the results of using different timestamp calculation method mentioned in the [extractor](#extractor) section.
-
-Example of change in frame interval (1080P 10FPS), as 47:956 is expected for the clock in the second screenshot:
+Cameras may not shot frames at constant intervals. Here is an example of change in frame interval (1080P 10FPS), as 47:956 is expected for the clock in the second screenshot, but the actual clock is 48:059.
 ![Change in frame interval](./test/interval_0.png)
 ![Change in frame interval](./test/interval_1.png)
+
+When testing with Amcrest IP cameras, the change in interval was reflected in the extracted timestamps, but not always. One characteristic of this Amcrest camera is that although the frame interval changes, the total number of frames is constant in each 5-minutes recordings. This characteristic somehow helped to show why using the interpolated method provided the lowest error and standard deviation, as the method assumes the frame rate is constant.
+
+However, it is still recommended to test the results of using different timestamp calculation method showed in the [extractor](#extractor) section.
+
+### Video and Autio Encodings
+
+The current implementation of recorder only supports H.264 video and AAC audio, which should be supported by every camera. It is possible to support encoding like H.265 using only the GStreamer library, but it is not implemented yet.
+
+## References
+
+The methodology of using RTCP Sender Reports to synchronize cameras is mainly based on the following research:
+
+- de Castro, Pedro,Emanuel Moura. Multi-Camera Synchronization for Object Detection in Multiple Scenes by Computer Vision, Universidade do Porto (Portugal), Portugal, 2021. ProQuest, https://link.ezproxy.neu.edu/login?url=https://www.proquest.com/dissertations-theses/multi-camera-synchronization-object-detection/docview/3122668153/se-2.
+
+However, the implementation was not demonstrated in the research paper, and this tool is an attempt to implement the methodology and also a supplement to solve the problem of timestamp interpolation for better synchronization.
