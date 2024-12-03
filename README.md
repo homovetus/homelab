@@ -114,8 +114,10 @@ sudo docker build -t rtcp-ntp-recorder .
 To run the Docker container, use the following command:
 
 ```sh
-docker run --rm -v ./storage:/storage rtcp-ntp-recorder <RTSP_URL> /storage/<output_filename_without_extension>
+docker run --rm -v <host_folder>:<mounted_folder> rtcp-ntp-recorder <RTSP_URL> <mounted_folder>/<output_filename_without_extension>
 ```
+
+Example:
 
 ```sh
 docker run --rm -v ./storage:/storage rtcp-ntp-recorder 'rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif' /storage/camera1
