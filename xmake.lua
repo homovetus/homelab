@@ -9,6 +9,7 @@ target("recorder") do
     add_packages("pkgconfig::gstreamer-1.0")
     add_packages("pkgconfig::gstreamer-rtp-1.0")
     add_links("gstcodecparsers-1.0")
+    set_targetdir("./bin")
     if is_mode("debug") then
         add_defines("DEBUG")
     end

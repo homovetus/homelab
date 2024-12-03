@@ -99,6 +99,28 @@ When the script finishes, it will generate 4 files:
 - `<video_filename>_RTP_interpolated.txt`: Contains the timestamps interpolated using two RTCP SR packets, this is used to avoid time rewinding in the previous method.
 - `<video_filename>_interpolated.txt`: Contains the timestamps interpolated using only RTCP SR packets and do not refer to the RTP timestamps. This method assumes each frame are equally spaced in time (Not always true for some cameras).
 
+## Docker
+
+### Build Docker Image
+
+To build the Docker image, run the following command in the project directory:
+
+```sh
+sudo docker build -t rtcp-ntp-recorder .
+```
+
+### Run Docker Container
+
+To run the Docker container, use the following command:
+
+```sh
+docker run --rm -v ./storage:/storage rtcp-ntp-recorder <RTSP_URL> /storage/<output_filename_without_extension>
+```
+
+```sh
+docker run --rm -v ./storage:/storage rtcp-ntp-recorder 'rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif' /storage/camera1
+```
+
 ## Performance
 
 The level of syncing have been tested with Amcrest IP cameras using different video resolutions and frame rates. Two cameras were synchronized with the same local NTP server and recorded simultaneously.

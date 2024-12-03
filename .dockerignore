@@ -1,0 +1,12 @@
+!frigate/config/config.yaml
+**/.DS_Store
+
+.cache
+.vscode
+.xmake
+build
+frigate/config/*
+frigate/storage/*
+tools
+test
+venv
