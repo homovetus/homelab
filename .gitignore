@@ -5,6 +5,7 @@
 .vscode
 .xmake
 build
+bin
 frigate/config/*
 frigate/storage/*
 test/*.mp4
