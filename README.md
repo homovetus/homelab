@@ -146,7 +146,7 @@ In general, a sync within 3 frames can be expected for 30FPS videos.
 
 ### RTCP Sender Reports
 
-The tool assumes that the camera provides RTCP Sender Reports (SR). If the stream does not provide SRs, this tool will not work. RTCP SR is required for ONVIF compatible cameras. To check if the camera send RTCP SR, the Wireshark can be a useful tool. ![Wireshark](./test/wireshark.png)
+The tool assumes that the camera provides RTCP Sender Reports (SR). If the stream does not provide SRs, this tool will not work. RTCP SR is required for ONVIF compatible cameras. To check if the camera sends RTCP SR, the Wireshark can be a useful tool. ![Wireshark](./test/wireshark.png)
 
 ### Frame Rate Stability
 
