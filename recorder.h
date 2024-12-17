@@ -34,8 +34,6 @@ typedef struct RTPTimeinfo {
 } RTPTimeInfo;
 
 typedef struct {
-  char *file_name_prefix;
-
   GstElement *pipeline;
   GstH264NalParser *h264_nal_parser;
 

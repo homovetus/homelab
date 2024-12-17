@@ -1,9 +1,17 @@
+#include <getopt.h>
 #include <gst/rtp/rtp.h>
 #include <time.h>
 
 #include "recorder.h"
 
-UserData user_data;
+#define DEFAULT_MAX_FILES 0
+#define DEFAULT_MAX_SIZE_TIME 300 // 5 minutes
+
+gint max_files = DEFAULT_MAX_FILES;
+guint64 max_size_time = DEFAULT_MAX_SIZE_TIME;
+gchar *rtsp_url = NULL;
+gchar *output_filename = NULL;
+UserData user_data = {0};
 
 // Emitted after a new manager (like rtpbin) was created and the default properties were configured.
 void register_rtcp_callback(GstElement *rtspsrc, GstElement *manager, gpointer user_data) {
@@ -144,21 +152,50 @@ GstPadProbeReturn inject_timestamp(GstPad *pad, GstPadProbeInfo *info, gpointer 
 }
 
 gchararray generate_file_name(GstElement *splitmux, guint fragment_id, gpointer user_data) {
-  UserData *udata = (UserData *)user_data;
   // Format: <prefix>_<YYYYMMDD_HHMM>.mp4
   time_t now = time(NULL);
   struct tm *tm = localtime(&now);
-  gchar *file_name = g_strdup_printf("%s_%04d%02d%02d_%02d%02d.mp4", udata->file_name_prefix, tm->tm_year + 1900,
-                                     tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min);
+  gchar *file_name = g_strdup_printf("%s_%04d%02d%02d_%02d%02d.mp4", output_filename, tm->tm_year + 1900, tm->tm_mon + 1,
+                                     tm->tm_mday, tm->tm_hour, tm->tm_min);
   return file_name;
 }
 
 static void handle_sigint(int signum) { gst_element_send_event(user_data.pipeline, gst_event_new_eos()); }
 
+void print_usage(const char *prog_name) {
+  g_print("Usage: %s [options] <RTSP_URL> <output_filename_no_extension>\n", prog_name);
+  g_print("\n");
+  g_print("Options:\n");
+  g_print("  -n <value>\tMaximum number of files to keep, 0 for unlimited (default: %d)\n", DEFAULT_MAX_FILES);
+  g_print("  -l <value>\tMaximum length of each file in seconds, 0 for unlimited (default: %d)\n", DEFAULT_MAX_SIZE_TIME);
+  g_print("  -h\t\tPrint this help message\n");
+}
+
 int main_func(int argc, char *argv[]) {
-  if (argc < 3) {
-    g_printerr("Usage: %s <RTSP_URL> <output_filename_without_extension>\n", argv[0]);
-    return -1;
+  { // Parse command line arguments
+    int opt;
+    while ((opt = getopt(argc, argv, "n:l:h")) != -1) {
+      switch (opt) {
+      case 'n':
+        max_files = g_ascii_strtoll(optarg, NULL, 10);
+        break;
+      case 'l':
+        max_size_time = g_ascii_strtoull(optarg, NULL, 10);
+        break;
+      case 'h':
+        print_usage(argv[0]);
+        return 0;
+      default:
+        print_usage(argv[0]);
+        return -1;
+      }
+    }
+    if (argc - optind != 2) {
+      print_usage(argv[0]);
+      return -1;
+    }
+    rtsp_url = argv[optind];
+    output_filename = argv[optind + 1];
   }
 
   { // Initialize the GStreamer library, build gstreamer elements in UserData
@@ -167,21 +204,20 @@ int main_func(int argc, char *argv[]) {
         // RTCP source URL
         "rtspsrc name=rtspsrc protocols=tcp add-reference-timestamp-meta=true location=%s "
         // Output file
-        "splitmuxsink name=splitmuxsink max-size-time=300000000000 max-size-bytes=0 location=%s%%02d.mp4 " // 5 minutes
+        "splitmuxsink name=splitmuxsink max-size-time=%" G_GUINT64_FORMAT " max-files=%d "
         // Video
         "rtspsrc. ! rtpjitterbuffer ! rtph264depay name=rtph264depay ! h264parse name=h264parse ! splitmuxsink. "
         // Audio
         "rtspsrc. ! rtpjitterbuffer ! rtpmp4gdepay ! aacparse ! queue ! splitmuxsink.audio_0 ",
-        argv[1], argv[2]);
+        rtsp_url, (guint64)(max_size_time * 1e9), max_files);
     g_print("pipeline_desc: %s\n", pipeline_desc);
     user_data.pipeline = gst_parse_launch(pipeline_desc, NULL);
     g_free(pipeline_desc);
     if (!user_data.pipeline) {
-      g_printerr("Pipeline can nat be created");
+      g_printerr("Pipeline can not be created");
       return -1;
     }
 
-    user_data.file_name_prefix = argv[2];
     user_data.h264_nal_parser = gst_h264_nal_parser_new();
   }
 
