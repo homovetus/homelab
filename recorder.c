@@ -166,8 +166,11 @@ void print_usage(const char *prog_name) {
   g_print("Usage: %s [options] <RTSP_URL> <output_filename_no_extension>\n", prog_name);
   g_print("\n");
   g_print("Options:\n");
-  g_print("  -n <value>\tMaximum number of files to keep, 0 for unlimited (default: %d)\n", DEFAULT_MAX_FILES);
-  g_print("  -l <value>\tMaximum length of each file in seconds, 0 for unlimited (default: %d)\n", DEFAULT_MAX_SIZE_TIME);
+  g_print(
+      "  -n <value>\tSet the maximum number of files to retain before overwriting older files (0 for unlimited; default: %d)\n",
+      DEFAULT_MAX_FILES);
+  g_print("  -l <value>\tSet the maximum duration of each file in seconds (0 for unlimited; default: %d)\n",
+          DEFAULT_MAX_SIZE_TIME);
   g_print("  -h\t\tPrint this help message\n");
 }
 

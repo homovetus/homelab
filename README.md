@@ -72,11 +72,15 @@ xmake project -k compile_commands
 To start recording an RTSP stream, use the following command:
 
 ```sh
-./recorder <RTSP_URL> <output_filename_without_extension>
+./recorder [options] <RTSP_URL> <output_filename_no_extension>
 ```
 
 - Replace `<RTSP_URL>` with the URL of the stream.
 - Replace `<output_filename_without_extension>` with the desired output filename without the extension. e.g., `LivingRoomCamera`.
+- Options:
+  - `-n <value>`: Maximum number of files to keep, 0 for unlimited (default: 0)
+  - `-l <value>`: Maximum length of each file in seconds, 0 for unlimited (default: 300)
+  - `-h`: Show help message
 
 ### Extractor
 
@@ -114,13 +118,13 @@ sudo docker build -t rtcp-ntp-recorder .
 To run the Docker container, use the following command:
 
 ```sh
-docker run --rm -v <host_folder>:<mounted_folder> rtcp-ntp-recorder <RTSP_URL> <mounted_folder>/<output_filename_without_extension>
+docker run --rm -v <host_folder>:<mounted_folder> rtcp-ntp-recorder [options] <RTSP_URL> <mounted_folder>/<output_filename_no_extension>
 ```
 
 Example:
 
 ```sh
-docker run --rm -v ./storage:/storage rtcp-ntp-recorder 'rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif' /storage/camera1
+docker run --rm -v ./storage:/storage rtcp-ntp-recorder -l 500 'rtsp://onvif:password!@192.168.0.2:554/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif' /storage/camera1
 ```
 
 ## Performance
